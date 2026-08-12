@@ -19,9 +19,20 @@ local function CustomAlert(data)
         name = data.name or nil, -- Name of either officer/ems or a player
         vehicle = data.model or nil, -- Vehicle name
         plate = data.plate or nil, -- Vehicle plate
+        plateIndex = data.plateIndex, -- Plate design (0-5), drawn behind the number
         alertTime = data.alertTime or nil, -- How long it stays on the screen in seconds
-        doorCount = data.doorCount or nil, -- How many doors on vehicle
-        automaticGunfire = data.automaticGunfire or false, -- Automatic Gun or not
+        information = data.information or nil, -- Free-text note shown on the alert
+        weapon = data.weapon or nil, -- Weapon name (danger banner)
+        weaponClass = data.weaponClass, -- pistol/smg/rifle/shotgun/sniper/heavy
+        weaponTier = data.weaponTier,   -- 1 sidearm · 2 long gun · 3 heavy
+        class = data.class or nil, -- Vehicle class
+        -- The UI reads `doors` and `automaticGunFire` (capital F) — the old
+        -- keys below never matched and thus never displayed for custom
+        -- alerts; kept for anything external that might read them.
+        doors = data.doorCount or data.doors or nil,
+        doorCount = data.doorCount or nil,
+        automaticGunFire = data.automaticGunfire or data.automaticGunFire or false,
+        automaticGunfire = data.automaticGunfire or false,
         alert = {
             radius = data.radius or 0, -- Radius around the blip
             sprite = data.sprite or 1, -- Sprite of the blip
@@ -55,6 +66,7 @@ local function VehicleTheft()
         heading = GetPlayerHeading(),
         vehicle = vehicle.name,
         plate = vehicle.plate,
+        plateIndex = vehicle.plateIndex,
         color = vehicle.color,
         class = vehicle.class,
         doors = vehicle.doors,
@@ -79,6 +91,8 @@ local function Shooting()
         street = GetStreetAndZone(coords),
         gender = GetPlayerGender(),
         weapon = GetWeaponName(),
+        weaponClass = select(1, ClassifyWeapon(GetWeaponName())),
+        weaponTier = select(2, ClassifyWeapon(GetWeaponName())),
         alertTime = nil,
         jobs = { 'leo' }
     }
@@ -97,6 +111,8 @@ local function Hunting()
         icon = 'fas fa-gun',
         priority = 2,
         weapon = GetWeaponName(),
+        weaponClass = select(1, ClassifyWeapon(GetWeaponName())),
+        weaponTier = select(2, ClassifyWeapon(GetWeaponName())),
         coords = coords,
         gender = GetPlayerGender(),
         street = GetStreetAndZone(coords),
@@ -120,10 +136,13 @@ local function VehicleShooting()
         priority = 2,
         coords = coords,
         weapon = GetWeaponName(),
+        weaponClass = select(1, ClassifyWeapon(GetWeaponName())),
+        weaponTier = select(2, ClassifyWeapon(GetWeaponName())),
         street = GetStreetAndZone(coords),
         heading = GetPlayerHeading(),
         vehicle = vehicle.name,
         plate = vehicle.plate,
+        plateIndex = vehicle.plateIndex,
         color = vehicle.color,
         class = vehicle.class,
         doors = vehicle.doors,
@@ -150,6 +169,7 @@ local function SpeedingVehicle()
         heading = GetPlayerHeading(),
         vehicle = vehicle.name,
         plate = vehicle.plate,
+        plateIndex = vehicle.plateIndex,
         color = vehicle.color,
         class = vehicle.class,
         doors = vehicle.doors,
@@ -401,6 +421,7 @@ local function CarJacking(vehicle)
         heading = GetPlayerHeading(),
         vehicle = vehicle.name,
         plate = vehicle.plate,
+        plateIndex = vehicle.plateIndex,
         color = vehicle.color,
         class = vehicle.class,
         doors = vehicle.doors,
@@ -499,6 +520,30 @@ end
 exports('OfficerBackup', OfficerBackup)
 
 RegisterNetEvent("ps-dispatch:client:officerbackup", function() OfficerBackup() end)
+
+local function PlateBackup()
+    local coords = GetEntityCoords(cache.ped)
+
+    local dispatchData = {
+        message = locale('platebackup'),
+        codeName = 'platebackup',
+        code = '10-32',
+        icon = 'fa-solid fa-hands-holding-child',
+        priority = 2,
+        coords = coords,
+        gender = GetPlayerGender(),
+        street = GetStreetAndZone(coords),
+        name = PlayerData.charinfo.firstname .. " " .. PlayerData.charinfo.lastname,
+        callsign = PlayerData.metadata["callsign"],
+        alertTime = 10,
+        jobs = { 'ems', 'leo' }
+    }
+
+    TriggerServerEvent('ps-dispatch:server:notify', dispatchData)
+end
+exports('PlateBackup', PlateBackup)
+
+RegisterNetEvent("ps-dispatch:client:platebackup", function() PlateBackup() end)
 
 local function OfficerInDistress()
     local coords = GetEntityCoords(cache.ped)
@@ -764,6 +809,7 @@ local function CarBoosting(vehicle)
         heading = GetPlayerHeading(),
         vehicle = vehicle.name,
         plate = vehicle.plate,
+        plateIndex = vehicle.plateIndex,
         color = vehicle.color,
         class = vehicle.class,
         doors = vehicle.doors,

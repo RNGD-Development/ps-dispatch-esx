@@ -1,13 +1,181 @@
 Config = Config or {}
 
-Config.ShortCalls = false -- Dispatch notifications are sent containing only the alert name, omitting additional details. For more information, the dispatch menu can be accessed.  
-Config.Debug = false -- Enables debug and send alerts when leo break the law.
+Config.Debug = true -- Enables debug and send alerts when leo break the law.
 
 Config.RespondKeybind = 'E'
 Config.OpenDispatchMenu = 'O'
 Config.AlertTime = 5     -- Specify the duration for the alert to appear on the screen. The default time is 5 seconds for all alerts. To set a different duration for specific alerts, change the value in `alertTime = nil` found in the alerts.lua file.
 
 Config.MaxCallList = 25 -- maximum dispatch calls in dispatch list
+
+-- ── Critical alerts ─────────────────────────────────────────────────────────
+-- Priority 0: above the existing red. Reserved for calls that make every unit
+-- drop what it is doing.
+--
+-- Kept deliberately short. The point of a top tier is that it means something,
+-- and a board where half the calls are critical is the situation this was
+-- added to fix. Repeated reports still escalate a routine call to priority 1,
+-- but never into this tier: critical is granted, not accumulated.
+--
+-- Nothing is renumbered: other resources keep sending 1/2/3 and keep their
+-- meaning. Only these code names are lifted above them.
+Config.CriticalCodes = {
+    -- An officer in trouble outranks any civilian crime.
+    'officerdown',
+    'officerdistress',
+    'emsdown',
+    -- Major robberies. Store hold-ups deliberately excluded: serious, but not
+    -- "abandon everything" events.
+    'bankrobbery',            -- Fleeca
+    'pacificbankrobbery',
+    'paletobankrobbery',
+    'vangelicorobbery',       -- jeweller
+    'humanelabsrobbery',
+    'unionrobbery',
+    'prisonbreak',
+}
+
+-- ── Plate check log ─────────────────────────────────────────────────────────
+-- A private, per-officer log of the plate checks they have run, shown as a
+-- second tab in the dispatch menu.
+--
+-- Nothing has to be wired up for this: plate checks already arrive as targeted
+-- alerts (ps-mdt's PlateCheckAlert sends them via SendTargetedAlert), and the
+-- log simply keeps the ones that scroll past. Hits never leave the client that
+-- ran them.
+
+-- use this export server side, for your radar script, this will check the plate, 
+-- and if Config.PlateScanner is true, it will send a client alert with information
+
+-- exports['ps-mdt']:PlateCheckAlert(source, plate)
+Config.PlateScanner = {
+    -- False removes the tab and the tab bar with it — with one panel left
+    -- there is nothing to switch between.
+    Enabled = true,
+ 
+    -- Checks kept in the log. Oldest fall off; this is a patrol log, not an
+    -- archive.
+    MaxHits = 40,
+ 
+    -- Which alert codeNames feed the log. Leave empty to accept any alert that
+    -- carries both a plate and a footer — the convention this UI already uses
+    -- for an ANSWER (plate check, record lookup) as opposed to a job.
+    
+    Jobs = { 'leo' }, -- job type
+
+    CodeNames = { 'platecheck' },
+ 
+    -- Per-entry "Request backup" button. Sends ps-dispatch's ordinary
+    -- OfficerBackup alert, so it reaches the board like any other backup call.
+    BackupButton = true,
+    BackupCooldownMs = 60000,
+}
+
+-- ── Call merging (spam collapse) ─────────────────────────────────────────────
+-- Identical alerts (same alert type) reported within `Window` seconds and
+-- `Radius` metres of an existing call bump that call's ×count instead of
+-- creating a new popup/blip/list entry. Six shots-fired reports from one
+-- shootout become one call marked "×6".
+Config.CallMerge = {
+    Enabled = true,
+    Window = 45,    -- seconds
+    Radius = 50.0,  -- metres
+    -- A call merged this many times auto-escalates to priority 1 (red card,
+    -- live on every screen it's still showing on): five shots-fired reports
+    -- from one spot are no longer a routine call. 0 disables escalation.
+    EscalateAt = 4,
+}
+
+-- Hotspot detection: if this many SEPARATE calls (merges don't count — those
+-- are one incident) land on the same street within Window minutes, alerts
+-- from that street carry a "Hotspot ×N" badge. Enabled = false turns it off.
+Config.Hotspot = {
+    Enabled = true,
+    Window = 30,   -- minutes
+    Threshold = 3, -- calls on the same street
+}
+
+-- These alert codeNames are pinned to the top of the dispatch menu,
+-- regardless of age — an officer down never scrolls out of sight.
+Config.PinnedCodes = { 'officerdown', 'officerdistress', 'emsdown' }
+
+-- Send alerts only to players whose job matches the call (server-side filter)
+-- instead of broadcasting to every client. Set false to restore the old
+-- behaviour (e.g. when not running QBCore).
+Config.FilteredBroadcast = true
+
+-- Maximum alert popups stacked on screen at once; older ones collapse into a
+-- "+N more" line until they expire.
+Config.MaxVisibleAlerts = 4
+
+-- Where the alert toasts appear on screen. The dispatch menu itself is
+-- always anchored to the right. Valid values:
+--   'top-left'    | 'top-center'    | 'top-right'
+--   'center-left' |                   'center-right'
+--   'bottom-left' | 'bottom-center' | 'bottom-right'
+Config.AlertPosition = 'top-right'
+
+-- Demo command that fires a varied sequence of test alerts 10 seconds apart
+-- (vehicle strip, weapon banner, priority, merge ×N, note, ...) so styling
+-- changes can be reviewed without staging crimes. Set false in production.
+Config.TestCommand = 'dispatchtest'
+
+-- Calls older than this many minutes are swept from the call list (the menu
+-- otherwise shows session-old calls forever). 0 disables the sweep.
+Config.CallLifetime = 30
+
+-- Also skip off-duty players in the server-side broadcast filter. Clients
+-- drop off-duty alerts anyway; this just saves sending them at all.
+Config.FilterOnDuty = true
+
+-- Hard cap on ps-dispatch:server:notify per player (events / seconds).
+-- The event is entirely client-driven, so without a limit a modified client
+-- can flood every officer's screen with fake alerts.
+Config.NotifyRateLimit = { Max = 12, Window = 10 }
+
+-- Map thumbnail on alert cards / expanded menu calls. Points at the ps-mdt
+-- map image served over NUI — CEF can read other resources' files directly,
+-- so no copy of the map ships with dispatch. Adjust the resource name if
+-- your MDT folder is named differently; set false to disable thumbnails.
+-- (Thumbnails hide themselves automatically if the image can't be loaded or
+-- the call is off the mainland map, e.g. Cayo.)
+Config.MdtMapImage = 'nui://ps-mdt/web/dist/images/map.jpeg'
+
+-- Calls with NO attached units older than this many minutes get an amber
+-- "unattended" badge in the dispatch menu, so dispatchers instantly see
+-- what's slipping through. 0 disables the badge.
+Config.UnattendedAfter = 3
+
+-- ── Alert sounds ─────────────────────────────────────────────────────────────
+-- GTA frontend sounds (audioName + audioRef), played directly through the
+-- game's own audio. No external sound resource is involved, which also means
+-- loudness follows the game's SFX slider — there is no per-sound volume API.
+Config.AlertSounds = {
+    -- Routine calls: the familiar dispatch chime.
+    default = { audioName = 'Lose_1st', audioRef = 'GTAO_FM_Events_Soundset' },
+    -- Priority 1 calls (and anything escalated into priority 1): an urgent
+    -- beep instead of a chime, so urgent traffic is audibly different
+    -- without anyone having to look at the screen.
+    priority = { audioName = 'CHECKPOINT_MISSED', audioRef = 'HUD_MINI_GAME_SOUNDSET' },
+    -- Priority 0 (Config.CriticalCodes): a harder tone, repeated.
+    --
+    -- The repeat matters more than the tone. Two unfamiliar beeps are hard to
+    -- tell apart mid-firefight, but a burst is recognisable even when you
+    -- can't name the sound — the same reason the visual tier uses motion
+    -- rather than another shade of red.
+    -- Stays inside HUD_MINI_GAME_SOUNDSET, the soundset the priority tone
+    -- already uses successfully — no audio bank to request, no guessing.
+    -- Alternatives from the same set if this one doesn't suit:
+    --   '10_SEC_WARNING'  (softer, lower)
+    --   'TIMER_STOP'      (blunt, single thud)
+    critical = {
+        audioName = 'TIMER_STOP',
+        audioRef = 'HUD_MINI_GAME_SOUNDSET',
+        repeats = 2,   -- how many times it fires
+        gapMs = 700,   -- spacing between them
+    },
+}
+
 Config.OnDutyOnly = true -- Set true if only on duty players can see the alert
 Config.Jobs = { -- Job Types or names that can access the dispatch menu. If you want to allow more jobs to see certain dispatch alerts. Go to alerts.lua and add the job name to the alert.
     "leo",
@@ -42,9 +210,41 @@ Config.Locations = {
         [1] = {label = "Hunting Zone", radius = 650.0, coords = vector3(-938.61, 4823.99, 313.92)},
     },
     ["NoDispatchZones"] = {
-        [1] = {label = "Ammunation 1", coords = vector3(13.53, -1097.92, 29.8), length = 14.0, width = 5.0, heading = 70, minZ = 28.8, maxZ = 32.8},
+        [1] = {label = "Ammunation 1", coords = vector3(13.53, -1097.92, 29.8), length = 14.0, width = 5.0, heading = 160, minZ = 28.8, maxZ = 32.8},
         [2] = {label = "Ammunation 2", coords = vector3(821.96, -2163.09, 29.62), length = 14.0, width = 5.0, heading = 270, minZ = 28.62, maxZ = 32.62},
     },
+}
+
+-- ── Major incidents ─────────────────────────────────────────────────────────
+-- A supervisor can declare a call a major incident: it pins to the top of
+-- everyone's board and, optionally, quiets routine chatter for the units
+-- working it.
+--
+-- Deliberately NOT server-wide silence. Only units attached to an incident are
+-- shielded, and only from routine traffic — everyone else keeps their normal
+-- board, so a second emergency across town is never hidden by the first.
+Config.MajorIncident = {
+    Enabled = true,
+
+    -- Minimum job grade allowed to declare or stand down an incident, per job
+    -- name. Jobs missing from this list cannot declare at all.
+    Grades = {
+        police = 4,
+        ambulance = 4,
+    },
+
+    -- Automatic end, in seconds. Someone always forgets, or logs off mid-shift.
+    -- Re-declaring an active incident extends it rather than resetting it.
+    Duration = 1800,
+
+    -- Quiet routine alerts for units attached to an incident. Priority 1 calls,
+    -- backup requests and anything addressed to the unit always come through —
+    -- the same carve-outs the existing "priority only" preference uses.
+    QuietRoutine = true,
+
+    -- How many incidents may run at once. Two banks going up together is a real
+    -- situation; a board full of "major" incidents is not.
+    MaxActive = 2,
 }
 
 -- Whitelist Guns that do not send shooting alerts
@@ -68,22 +268,32 @@ Config.WeaponWhitelist = {
 
 Config.Blips = {
     ['vehicleshots'] = { -- Need to match the codeName in alerts.lua
-        radius = 0,
+        radius = 110.0,
         sprite = 119,
         color = 1,
         scale = 1.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     ['shooting'] = {
-        radius = 0,
+        radius = 110.0,
         sprite = 110,
         color = 1,
         scale = 1.5,
         length = 2,
+        sound = 'Lose_1st',
+        sound2 = 'GTAO_FM_Events_Soundset',
+        offset = true,
+        flash = false
+    },
+    -- Backup requested from a plate hit (see Config.PlateScanner.Backup).
+    ['platebackup'] = {
+        radius = 0,
+        scale = 1.6,
+        length = 3,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
         offset = false,
@@ -101,14 +311,14 @@ Config.Blips = {
         flash = false
     },
     ['fight'] = {
-        radius = 0,
+        radius = 60.0,
         sprite = 685,
         color = 69,
         scale = 1.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     ['civdown'] = {
@@ -154,7 +364,7 @@ Config.Blips = {
         flash = false
     },
     ['officerdown'] = {
-        radius = 15.0,
+        radius = 0,
         sprite = 526,
         color = 1,
         scale = 1.5,
@@ -164,7 +374,7 @@ Config.Blips = {
         flash = true
     },
     ['officerbackup'] = {
-        radius = 15.0,
+        radius = 0,
         sprite = 526,
         color = 1,
         scale = 1.5,
@@ -174,7 +384,7 @@ Config.Blips = {
         flash = true
     },
     ['officerdistress'] = {
-        radius = 15.0,
+        radius = 0,
         sprite = 526,
         color = 1,
         scale = 1.5,
@@ -276,14 +486,14 @@ Config.Blips = {
         flash = false
     },
     ['houserobbery'] = {
-        radius = 0,
+        radius = 60.0,
         sprite = 40,
         color = 5,
         scale = 1.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     ['suspicioushandoff'] = {
@@ -308,14 +518,14 @@ Config.Blips = {
         flash = false
     },
     ['vehicletheft'] = {
-        radius = 0,
+        radius = 80.0,
         sprite = 595,
         color = 60,
         scale = 1.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     ['signrobbery'] = {
@@ -330,14 +540,14 @@ Config.Blips = {
         flash = false
     },
     ['susactivity'] = {
-        radius = 0,
+        radius = 130.0,
         sprite = 66,
         color = 37,
         scale = 0.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     -- Rainmad Scripts
@@ -423,14 +633,14 @@ Config.Blips = {
         flash = false
     },
     ['carjack'] = {
-        radius = 0,
+        radius = 80.0,
         sprite = 595,
         color = 60,
         scale = 1.5,
         length = 2,
         sound = 'Lose_1st',
         sound2 = 'GTAO_FM_Events_Soundset',
-        offset = false,
+        offset = true,
         flash = false
     },
     ['explosion'] = {
