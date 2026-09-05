@@ -109,8 +109,8 @@ local function queryIdentity(identifier)
     }
 end
 
---- Cached name for an identifier, fetching it once if needed.
---- Only call from a coroutine — `cached` alone is the synchronous accessor.
+--- Cached name for an identifier, fetching it once if needed. Only call this
+--- from a coroutine; cachedIdentity below is the non-blocking accessor.
 ---@param identifier string|nil
 ---@return table
 local function identityFor(identifier)
