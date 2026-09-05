@@ -160,6 +160,40 @@ function Bridge.GetPlayerData()
     return core.Functions.GetPlayerData()
 end
 
+--- Block until the framework can actually answer "what job is this player?".
+---
+--- ESX fires esx:playerLoaded from the server, and on a multicharacter server
+--- that lands before ESX.PlayerData is filled in. Building the unit from it at
+--- that moment produced a player with no job name — which downstream reads as
+--- job.type 'civilian', fails every isJobValid() check, and leaves the menu
+--- silently doing nothing for the rest of the session. Waiting for the data
+--- rather than trusting the event's timing is what makes a fresh connect
+--- behave the same as an in-session resource restart.
+---
+--- Yields, so callers must be in a coroutine (every caller is an event handler
+--- or thread). Returns false if the player never turned up within the timeout,
+--- in which case the caller should simply not build a unit yet.
+---@param timeoutMs? number defaults to 60s — character selection can take a while
+---@return boolean ready
+function Bridge.WaitForPlayerReady(timeoutMs)
+    if not Framework.IsESX() then return true end
+
+    local deadline = GetGameTimer() + (tonumber(timeoutMs) or 60000)
+    while GetGameTimer() < deadline do
+        local esx = getESX()
+        local data = esx and esx.GetPlayerData and esx.GetPlayerData()
+        -- job.name is the field every gate downstream keys on, so that — not
+        -- PlayerLoaded, which multichar sets three seconds late — is the real
+        -- readiness signal.
+        if type(data) == 'table' and type(data.job) == 'table' and data.job.name then
+            return true
+        end
+        Wait(200)
+    end
+
+    return false
+end
+
 --- Is a character in world? `LocalPlayer.state.isLoggedIn` is a QBCore
 --- statebag that ESX never sets, so a restart on an ESX server would otherwise
 --- skip zone creation until the next relog.

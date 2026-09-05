@@ -126,6 +126,10 @@ local function createZones()
 end
 
 local function setupDispatch()
+    -- On ESX the load event can arrive before the framework has the player's
+    -- job; see Bridge.WaitForPlayerReady. No-op on QB/QBX.
+    if not Bridge.WaitForPlayerReady() then return end
+
     local playerInfo = Bridge.GetPlayerData()
     -- Nothing to build a unit out of yet — a resource restart during character
     -- selection lands here before the player exists. The load event fires this
@@ -650,6 +654,22 @@ AddEventHandler('esx:playerLoaded', function()
 end)
 
 AddEventHandler('esx:onPlayerLogout', removeZones)
+
+-- Safety net for ESX: build the unit from the framework's own state as soon as
+-- it has one, whether or not esx:playerLoaded ever reached this resource.
+-- Event delivery here has already proven fragile (the event is networked, and
+-- its timing relative to ESX.PlayerData being populated depends on whether
+-- multicharacter is in play), and the failure mode is invisible — no error,
+-- just a menu that never opens. Polling for the answer costs one check every
+-- 200ms for at most a minute after joining, and only until the job appears.
+CreateThread(function()
+    if not Framework.IsESX() then return end
+    if not Bridge.WaitForPlayerReady() then return end
+    -- Already built by the event? Then there is nothing to do.
+    if PlayerData and PlayerData.job and PlayerData.job.name then return end
+    setupDispatch()
+    createZones()
+end)
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
