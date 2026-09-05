@@ -22,6 +22,21 @@
 
 Bridge = Bridge or {}
 
+-- ES-X fires these three over the network (TriggerClientEvent from the
+-- server). A resource only receives a networked event it has registered
+-- itself, via RegisterNetEvent — AddEventHandler alone is not enough. That
+-- registration is normally a side effect of importing @es_extended/imports.lua,
+-- which this resource deliberately does not (see getESX() below): without it,
+-- every AddEventHandler('esx:playerLoaded'/'esx:setJob'/'esx:onPlayerLogout', ...)
+-- in client/main.lua, client/incidents.lua and client/plates.lua silently
+-- never fired on a fresh connect — PlayerData stayed {} for the whole
+-- session, and only an in-session resource restart (onResourceStart, a local
+-- event that needs no such registration) ever populated it. Harmless to call
+-- on QB/QBX too: these names simply never fire there.
+RegisterNetEvent('esx:playerLoaded')
+RegisterNetEvent('esx:setJob')
+RegisterNetEvent('esx:onPlayerLogout')
+
 -- ── Core objects ────────────────────────────────────────────────────────────
 
 local qbCore = nil
