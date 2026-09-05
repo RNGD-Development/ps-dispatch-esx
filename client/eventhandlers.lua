@@ -49,7 +49,7 @@ AddEventHandler('CEventGunShot', function(witnesses, ped)
     WaitTimer('Shooting', function()
         if cache.ped ~= ped then return end
 
-        if PlayerData.job.type == 'leo' then
+        if (PlayerData.job and PlayerData.job.type) == 'leo' then
             if not Config.Debug then
                 return
             end
@@ -111,9 +111,9 @@ AddEventHandler('gameEventTriggered', function(name, args)
         if not victim or victim ~= cache.ped then return end
         if not isDead then return end
 
-        if PlayerData.job.type == 'leo' then
+        if (PlayerData.job and PlayerData.job.type) == 'leo' then
             exports['ps-dispatch']:OfficerDown()
-        elseif PlayerData.job.type == 'ems' then
+        elseif (PlayerData.job and PlayerData.job.type) == 'ems' then
             exports['ps-dispatch']:EmsDown()
         else
             exports['ps-dispatch']:InjuriedPerson()
@@ -147,7 +147,7 @@ for i = 1, #SpeedingEvents do
             end
             if cache.ped ~= ped then return end
 
-            if PlayerData.job.type == 'leo' then
+            if (PlayerData.job and PlayerData.job.type) == 'leo' then
                 if not Config.Debug then
                     return
                 end

@@ -126,10 +126,6 @@ local function createZones()
 end
 
 local function setupDispatch()
-    -- ESX cannot answer name/callsign/duty client-side; this pulls them from
-    -- the server once per load and per job change. No-op on QB/QBX.
-    Bridge.RefreshPlayerInfo()
-
     local playerInfo = Bridge.GetPlayerData()
     -- Nothing to build a unit out of yet — a resource restart during character
     -- selection lands here before the player exists. The load event fires this
@@ -154,6 +150,26 @@ local function setupDispatch()
             label = playerInfo.job.label
         },
     }
+
+    -- ESX cannot answer name/callsign/duty client-side, so this pulls them
+    -- from the server once per load and per job change and patches them into
+    -- the PlayerData already set above. No-op on QB/QBX.
+    --
+    -- Deliberately AFTER PlayerData is populated, not before: on ESX this
+    -- awaits a server round trip, and the keybinds below read the global
+    -- PlayerData directly. With the round trip first, PlayerData stayed {}
+    -- for however long that took — a keybind pressed in that window (e.g.
+    -- right after connecting) indexed a nil PlayerData.job and crashed. The
+    -- job/menu-gating fields are already available from GetPlayerData() alone
+    -- on ESX; only the name/callsign/duty enrichment genuinely needs the
+    -- round trip, so only that part waits for it.
+    Bridge.RefreshPlayerInfo()
+    local refreshed = Bridge.GetPlayerData()
+    if refreshed and refreshed.charinfo and refreshed.metadata then
+        PlayerData.charinfo.firstname = refreshed.charinfo.firstname
+        PlayerData.charinfo.lastname = refreshed.charinfo.lastname
+        PlayerData.metadata.callsign = refreshed.metadata.callsign
+    end
 
     Wait(1000)
 
@@ -230,7 +246,7 @@ local function currentAlertCallId()
 end
 
 local function openMenu()
-    if not isJobValid(PlayerData.job.type) then return end
+    if not isJobValid(PlayerData.job and PlayerData.job.type) then return end
 
     local calls = lib.callback.await('ps-dispatch:callback:getCalls', false)
     -- The menu now holds the plate log too, so "no calls" is no longer the same
@@ -262,7 +278,7 @@ local function openMenu()
 end
 
 local function setWaypoint()
-    if not isJobValid(PlayerData.job.type) then return end
+    if not isJobValid(PlayerData.job and PlayerData.job.type) then return end
     if not IsOnDuty() then return end
 
     local data = lib.callback.await('ps-dispatch:callback:getLatestDispatch', false)
@@ -282,7 +298,7 @@ local function setWaypoint()
     local at = alertPosition(data)
     if not at then return end -- an alert without a position cannot be routed to
 
-    if not waypointCooldown and lib.table.contains(data.jobs, PlayerData.job.type) then
+    if not waypointCooldown and lib.table.contains(data.jobs, PlayerData.job and PlayerData.job.type) then
         SetNewWaypoint(at.x, at.y)
         TriggerServerEvent('ps-dispatch:server:attach', data.id, PlayerData)
         -- Local bridge event so companion resources (e.g. ps-mdt's automatic
@@ -592,7 +608,7 @@ RegisterNetEvent('ps-dispatch:client:notify', function(data)
 end)
 
 RegisterNetEvent('ps-dispatch:client:openMenu', function(data)
-    if not isJobValid(PlayerData.job.type) then return end
+    if not isJobValid(PlayerData.job and PlayerData.job.type) then return end
     if not IsOnDuty() then return end
 
     -- The menu now holds the plate log as well, so "no calls" is no longer the
