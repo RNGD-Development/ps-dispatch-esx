@@ -1,10 +1,10 @@
 local calls = {}
 local callCount = 0
 
--- QBCore is only needed for the job-filtered broadcast; keep the resource
--- functional without it (falls back to the old broadcast-to-everyone).
-local QBCore = nil
-pcall(function() QBCore = exports['qb-core']:GetCoreObject() end)
+-- A framework is only needed for the job-filtered broadcast; keep the resource
+-- functional without one (falls back to the old broadcast-to-everyone).
+-- Bridge.Available() is that check, and Bridge.GetPlayers() returns the same
+-- player-object shape on QBCore, QBX and ESX Legacy alike — see bridge/server.lua.
 
 ---@param data table
 -- Resolve blip metadata ONCE server-side from the shared config: the display
@@ -152,12 +152,12 @@ local function broadcastCall(data)
     -- not carry its true coords, no matter which branch sends it.
     local payload = publicCall(data)
 
-    if Config.FilteredBroadcast == false or not QBCore then
+    if Config.FilteredBroadcast == false or not Bridge.Available() then
         TriggerClientEvent('ps-dispatch:client:notify', -1, payload)
         return
     end
 
-    local players = QBCore.Functions.GetQBPlayers()
+    local players = Bridge.GetPlayers()
     for src, player in pairs(players) do
         local job = player.PlayerData and player.PlayerData.job
         if job and (lib.table.contains(data.jobs, job.type) or lib.table.contains(data.jobs, job.name)) then
@@ -209,11 +209,11 @@ end
 -- show "N responding" in real time. Same job/duty filter as full alerts.
 local function broadcastUnitCount(call)
     local payload = { id = call.id, count = #(call.units or {}) }
-    if Config.FilteredBroadcast == false or not QBCore then
+    if Config.FilteredBroadcast == false or not Bridge.Available() then
         TriggerClientEvent('ps-dispatch:client:unitCount', -1, payload)
         return
     end
-    for src, player in pairs(QBCore.Functions.GetQBPlayers()) do
+    for src, player in pairs(Bridge.GetPlayers()) do
         local job = player.PlayerData and player.PlayerData.job
         if job and type(call.jobs) == 'table'
             and (lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)) then
@@ -569,11 +569,11 @@ end)
 ---@param call table
 ---@return boolean # true when this player's job is targeted by the call
 -- Both actions below mutate a call everyone can see, so they are limited to
--- players the call was actually broadcast to. Without QBCore we cannot tell
+-- players the call was actually broadcast to. Without a framework we cannot tell
 -- jobs apart and fall back to allowing it, matching FilteredBroadcast.
 local function mayModifyCall(src, call)
-    if not QBCore then return true end
-    local player = QBCore.Functions.GetPlayer(src)
+    if not Bridge.Available() then return true end
+    local player = Bridge.GetPlayer(src)
     local job = player and player.PlayerData and player.PlayerData.job
     if not job or type(call.jobs) ~= 'table' then return false end
     return lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)
@@ -610,10 +610,10 @@ RegisterServerEvent('ps-dispatch:server:clearCall', function(id)
     -- Announce to the call's audience so every open menu drops it, then to
     -- the clearing player specifically: they may have already moved out of
     -- the job filter's reach (off duty) but still deserve the confirmation.
-    if Config.FilteredBroadcast == false or not QBCore then
+    if Config.FilteredBroadcast == false or not Bridge.Available() then
         TriggerClientEvent('ps-dispatch:client:callCleared', -1, call.id)
     else
-        for target, player in pairs(QBCore.Functions.GetQBPlayers()) do
+        for target, player in pairs(Bridge.GetPlayers()) do
             local job = player.PlayerData and player.PlayerData.job
             if job and (lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)) then
                 TriggerClientEvent('ps-dispatch:client:callCleared', target, call.id)
@@ -636,10 +636,10 @@ RegisterServerEvent('ps-dispatch:server:setCallNote', function(id, note)
     call.dispatchNote = note ~= '' and note or nil
 
     local payload = { id = call.id, note = call.dispatchNote }
-    if Config.FilteredBroadcast == false or not QBCore then
+    if Config.FilteredBroadcast == false or not Bridge.Available() then
         TriggerClientEvent('ps-dispatch:client:callNote', -1, payload)
     else
-        for target, player in pairs(QBCore.Functions.GetQBPlayers()) do
+        for target, player in pairs(Bridge.GetPlayers()) do
             local job = player.PlayerData and player.PlayerData.job
             if job and (lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)) then
                 TriggerClientEvent('ps-dispatch:client:callNote', target, payload)

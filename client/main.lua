@@ -1,4 +1,8 @@
-QBCore = exports['qb-core']:GetCoreObject()
+-- Still the QBCore core object on QB/QBX servers, and still global so that
+-- companion resources reading it keep working. Resolved through the bridge so
+-- it is simply nil on ESX instead of erroring on a qb-core export that isn't
+-- there — everything in this file reads PlayerData, not QBCore.
+QBCore = Bridge.GetCoreObject()
 PlayerData = {}
 
 -- Settings are persisted with SetResourceKvp rather than the NUI's own
@@ -122,7 +126,18 @@ local function createZones()
 end
 
 local function setupDispatch()
-    local playerInfo = QBCore.Functions.GetPlayerData()
+    -- ESX cannot answer name/callsign/duty client-side; this pulls them from
+    -- the server once per load and per job change. No-op on QB/QBX.
+    Bridge.RefreshPlayerInfo()
+
+    local playerInfo = Bridge.GetPlayerData()
+    -- Nothing to build a unit out of yet — a resource restart during character
+    -- selection lands here before the player exists. The load event fires this
+    -- again once they do.
+    if not playerInfo or not playerInfo.charinfo or not playerInfo.metadata or not playerInfo.job then
+        return
+    end
+
     local locales = lib.getLocales()
     PlayerData = {
         charinfo = {
@@ -608,6 +623,18 @@ end)
 
 AddEventHandler('QBCore:Client:OnPlayerUnload', removeZones)
 
+-- ESX Legacy equivalents, registered alongside rather than instead of the
+-- above: only one framework's events ever fire on a given server, so both sets
+-- can sit here permanently.
+AddEventHandler('esx:setJob', function() setupDispatch() end)
+
+AddEventHandler('esx:playerLoaded', function()
+    setupDispatch()
+    createZones()
+end)
+
+AddEventHandler('esx:onPlayerLogout', removeZones)
+
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     setupDispatch()
@@ -617,7 +644,9 @@ AddEventHandler('onResourceStart', function(resourceName)
     -- but 0.00 after a restart — the cost IS the ox_lib zone frame loop, and
     -- after a restart it simply wasn't running anymore. With empty zone
     -- lists in the config there are no zones and no frame loop at all.)
-    if LocalPlayer.state.isLoggedIn then
+    -- Via the bridge: isLoggedIn is a QBCore statebag, and reading it directly
+    -- meant an ESX server never rebuilt its zones after a restart.
+    if Bridge.IsLoggedIn() then
         createZones()
     end
 end)

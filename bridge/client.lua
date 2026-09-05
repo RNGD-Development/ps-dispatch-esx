@@ -145,6 +145,23 @@ function Bridge.GetPlayerData()
     return core.Functions.GetPlayerData()
 end
 
+--- Is a character in world? `LocalPlayer.state.isLoggedIn` is a QBCore
+--- statebag that ESX never sets, so a restart on an ESX server would otherwise
+--- skip zone creation until the next relog.
+---@return boolean
+function Bridge.IsLoggedIn()
+    if Framework.IsESX() then
+        local esx = getESX()
+        if not esx then return false end
+        if type(esx.IsPlayerLoaded) == 'function' then
+            local ok, loaded = pcall(esx.IsPlayerLoaded)
+            if ok then return loaded == true end
+        end
+        return esx.PlayerLoaded == true
+    end
+    return LocalPlayer.state.isLoggedIn == true
+end
+
 --- 0 male · 1 female, matching QBCore's charinfo.gender.
 ---@return number
 function Bridge.GetGender()

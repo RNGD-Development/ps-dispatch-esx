@@ -647,7 +647,7 @@ RegisterNetEvent('ps-dispatch:client:sendEmergencyMsg', function(data, type, ano
     if spamdetek < 0 then spamdetek = Config.AlertCommandCooldown end
     if spamdetek <= Config.AlertCommandCooldown and pslastaction > 0 then
     pslastaction = idtrack
-    QBCore.Functions.Notify("Command on cooldown", "error")
+    lib.notify({ description = "Command on cooldown", position = 'top', type = "error" })
     else
     pslastaction = idtrack
     local jobs = { ['911'] = { 'leo' }, ['311'] = { 'ems' } }

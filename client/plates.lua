@@ -242,3 +242,9 @@ end)
 RegisterNetEvent('qbx_core:client:onJobUpdate', function()
     CreateThread(function() Wait(500) pushTabVisibility() end)
 end)
+
+-- ESX Legacy. PlayerData.job.type is rebuilt by client/main.lua on the same
+-- event, hence the same deliberate delay as the two above.
+AddEventHandler('esx:setJob', function()
+    CreateThread(function() Wait(500) pushTabVisibility() end)
+end)

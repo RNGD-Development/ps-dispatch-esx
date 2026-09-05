@@ -8,8 +8,9 @@
 -- The state lives here and is broadcast whole on every change: the list is a
 -- handful of entries, so diffing it would be more code than it saves.
 
-local QBCore = nil
-pcall(function() QBCore = exports['qb-core']:GetCoreObject() end)
+-- Players are read through bridge/server.lua, which hands back the same
+-- object shape on QBCore, QBX and ESX Legacy: grade is always a table with a
+-- numeric `level`, so the comparisons below stay framework-blind.
 
 local function cfg()
     return (Config and Config.MajorIncident) or {}
@@ -43,9 +44,8 @@ end
 ---@return boolean
 function MayDeclareIncident(src)
     if cfg().Enabled == false then return false end
-    if not QBCore then return false end
 
-    local player = QBCore.Functions.GetPlayer(src)
+    local player = Bridge.GetPlayer(src)
     if not player then return false end
 
     local job = player.PlayerData and player.PlayerData.job
@@ -59,7 +59,7 @@ function MayDeclareIncident(src)
 end
 
 --- How the declaring unit is named on every other board.
----@param player table|nil the QBCore player object
+---@param player table|nil the player object from bridge/server.lua
 ---@return string
 local function describeDeclarer(player)
     local data = player and player.PlayerData
@@ -128,7 +128,7 @@ RegisterServerEvent('ps-dispatch:server:declareIncident', function(payload)
         return
     end
 
-    local player = QBCore and QBCore.Functions.GetPlayer(src)
+    local player = Bridge.GetPlayer(src)
 
     activeIncidents[id] = {
         id = id,

@@ -14,25 +14,19 @@ end
 
 function GetPlayerGender()
     local gender = locale('male')
-    if QBCore.Functions.GetPlayerData().charinfo.gender == 1 then
+    if Bridge.GetGender() == 1 then
         gender = locale('female')
     end
     return gender
 end
 
 function GetIsHandcuffed()
-    -- Standard Lua instead of CfxLua's `?.` so the file passes plain luac.
-    local pd = QBCore.Functions.GetPlayerData()
-    return pd and pd.metadata and pd.metadata.ishandcuffed
+    return Bridge.IsHandcuffed()
 end
 
 function IsOnDuty()
     if Config.OnDutyOnly then
-        if QBCore.Functions.GetPlayerData().job.onduty then
-            return true
-        else
-            return false
-        end
+        return Bridge.IsOnDuty()
     end
     return true
 end
@@ -40,7 +34,7 @@ end
 ---@return boolean
 local function HasPhone()
     for _, item in ipairs(Config.PhoneItems) do
-        if QBCore.Functions.HasItem(item) then
+        if Bridge.HasItem(item) then
             return true
         end
     end
@@ -158,7 +152,13 @@ function IsCallAllowed(message)
 
     if msgLength == 0 then return false end
     if GetIsHandcuffed() then return false end
-    if Config.PhoneRequired and not HasPhone() then QBCore.Functions.Notify('You need a communications device for this.', 'error', 5000) return false end
+    -- lib.notify rather than the framework's own notifier: ox_lib is already a
+    -- hard dependency of this resource, so this one line works identically on
+    -- QBCore, QBX and ESX without a bridge call at all.
+    if Config.PhoneRequired and not HasPhone() then
+        lib.notify({ description = 'You need a communications device for this.', position = 'top', type = 'error' })
+        return false
+    end
 
     return true
 end

@@ -172,3 +172,13 @@ end)
 RegisterNetEvent('qbx_core:client:onJobUpdate', function()
     CreateThread(function() Wait(500) refreshMayDeclare() end)
 end)
+
+-- ESX Legacy. Same two moments, same delays: a character entering the world
+-- and a grade change, both of which move the answer.
+AddEventHandler('esx:playerLoaded', function()
+    CreateThread(function() Wait(1500) refreshMayDeclare() end)
+end)
+
+AddEventHandler('esx:setJob', function()
+    CreateThread(function() Wait(500) refreshMayDeclare() end)
+end)
