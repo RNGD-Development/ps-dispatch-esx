@@ -7,7 +7,7 @@
   import CallRow from './CallRow.svelte'
   import PlateRow from './PlateRow.svelte'
   import MapThumb from './MapThumb.svelte'
-  import { tick } from 'svelte'
+  import { tick, onDestroy } from 'svelte'
 
   // Fixed steps rather than a slider: the control sits in the dialog you are
   // adjusting, so anything that needs dragging fights you. The ceiling is
@@ -47,9 +47,11 @@
   const rank = (c) => (c.priority ?? 3) <= 0 ? 0 : incidentIds.has(c.id) ? 1 : 2;
   const pinIncidents = (list) => [...list].sort((a, b) => rank(a) - rank(b));
   $: sortedPending = pinIncidents(pendingCalls);
-  // The active board needs the same treatment: a declared incident always has
-  // units on it, so that board is where it actually lives.
-  $: sortedActive = pinIncidents(activeCalls);
+  // sortedActive is further down, next to the board it sorts: it reads
+  // heldActive, which is written by a function rather than by a reactive
+  // assignment, so the compiler cannot order the two by dependency and falls
+  // back to source order. Declared up here it computed from the previous
+  // board and never caught up.
   let statsOpen = false;
   let settingsOpen = false;
 
@@ -152,6 +154,45 @@
   $: pendingCalls = $processedDispatchMenu.filter(d => !hasUnits(d));
   $: activeCalls = $processedDispatchMenu.filter(d => hasUnits(d));
 
+  // Moving a unit from one call to another reaches the NUI as two unit-count
+  // pushes: the call being left drops to zero before the call being taken
+  // reports its first, so `activeCalls` is empty for the moment in between.
+  //
+  // Letting the panel unmount and remount across that gap is not just a wasted
+  // exit and entrance. The list inside it updates while the panel itself is
+  // mid-outro, and the row that leaves is then pinned in place — Svelte fixes
+  // a removed row to position:absolute so the surviving rows can animate past
+  // it — but the destroy that should follow is lost with the panel's own
+  // outro. The pinned row stays exactly where it was, on top of the row that
+  // replaced it, for the rest of the session: two calls drawn over each other,
+  // each with its own headline, street and timestamp.
+  //
+  // Holding the last non-empty board for a beat keeps the panel mounted across
+  // the gap. A board that is genuinely finished still empties — just a moment
+  // later, which reads as the call being handed back rather than blinking out.
+  const ACTIVE_HOLD = 700;
+  let heldActive = [];
+  let activeHoldTimer = null;
+
+  function holdActiveBoard(list) {
+    if (list.length) {
+      clearTimeout(activeHoldTimer);
+      activeHoldTimer = null;
+      heldActive = list;
+    } else if (heldActive.length && !activeHoldTimer) {
+      activeHoldTimer = setTimeout(() => {
+        activeHoldTimer = null;
+        heldActive = [];
+      }, ACTIVE_HOLD);
+    }
+  }
+
+  $: holdActiveBoard(activeCalls);
+  // A declared incident always has units on it, so the active board is where
+  // it lives and it gets the same pinning as the pending list.
+  $: sortedActive = pinIncidents(heldActive);
+  onDestroy(() => clearTimeout(activeHoldTimer));
+
   function toggleStats() {
     statsOpen = !statsOpen;
     if (statsOpen) SendNUI('getStats'); // response arrives as a 'stats' push
@@ -189,7 +230,7 @@
 
   <!-- Active Calls board: everything currently being worked, units inline.
        Only appears when there is something active. -->
-  {#if activeCalls.length}
+  {#if heldActive.length}
     <div
       class="pd-panel w-[330px] max-w-[26vw] mr-[10px]" style="height:calc(86% / {$UI_SCALE});"
       in:fly={{ x: 26, duration: DUR.slow, easing: EASE_IN }}
@@ -198,7 +239,7 @@
       <div class="pd-head">
         <div class="pd-icon pd-icon--green"><i class="fas fa-user-group"></i></div>
         <span class="pd-title">Active Calls</span>
-        <span class="pd-badge pd-badge--green">{activeCalls.length}</span>
+        <span class="pd-badge pd-badge--green">{heldActive.length}</span>
       </div>
       <div class="pd-scroll flex-1 overflow-y-auto p-[10px] flex flex-col gap-[6px]">
         {#each sortedActive as dispatch (dispatch.id)}
@@ -313,7 +354,7 @@
           {/each}
           {#if !pendingCalls.length}
             <p class="pd-more" style="text-align:center; padding-top: 14px;" transition:fade={{ duration: DUR.fast }}>
-              {activeCalls.length ? 'All calls are being handled' : 'No active calls'}
+              {heldActive.length ? 'All calls are being handled' : 'No active calls'}
             </p>
           {/if}
         {/if}
