@@ -75,6 +75,21 @@ local function publicCall(call)
     return copy
 end
 
+--- Does this call target the given job? A call may be addressed by job TYPE
+--- ('leo'/'ems') or by job NAME ('police', 'lssd') and both have to count:
+--- types only exist on QBCore, so on every other framework they are a mapping
+--- this resource invents, and other resources routinely address alerts by the
+--- job name they actually know.
+---@param job table|nil the player's job table
+---@param call table|nil
+---@return boolean
+local function callTargetsJob(job, call)
+    if type(job) ~= 'table' or type(call) ~= 'table' or type(call.jobs) ~= 'table' then
+        return false
+    end
+    return lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)
+end
+
 -- Fields a merged report may overwrite on the existing call. Deliberately a
 -- whitelist: id, units, count and the escalation/hotspot bookkeeping have to
 -- survive a merge untouched.
@@ -396,8 +411,26 @@ RegisterServerEvent('ps-dispatch:server:detach', function(id, player)
 end)
 
 -- Callbacks
+--- The newest call THIS player was sent — not the newest call on the server.
+--- The respond keybind attaches the unit to whatever comes back from here, so
+--- it has to be the alert that is on their screen. calls[#calls] was whichever
+--- alert happened to be last overall, which on any server running more than one
+--- dispatch job is regularly another job's call: the keybind then silently did
+--- nothing while that call was the most recent one. Sanitised like every other
+--- outbound call, so an offset alert still doesn't leak its true coords.
 lib.callback.register('ps-dispatch:callback:getLatestDispatch', function(source)
-    return calls[#calls]
+    -- Unfiltered broadcast means everyone receives every alert; the keybind
+    -- has to stay in step with that rather than filtering what was just sent.
+    if Config.FilteredBroadcast == false or not Bridge.Available() then
+        return publicCall(calls[#calls])
+    end
+
+    local player = Bridge.GetPlayer(source)
+    local job = player and player.PlayerData and player.PlayerData.job
+    for i = #calls, 1, -1 do
+        if callTargetsJob(job, calls[i]) then return publicCall(calls[i]) end
+    end
+    return nil
 end)
 
 --- The whole call list, sanitised. Same reasoning as broadcastCall: the menu
@@ -574,9 +607,7 @@ end)
 local function mayModifyCall(src, call)
     if not Bridge.Available() then return true end
     local player = Bridge.GetPlayer(src)
-    local job = player and player.PlayerData and player.PlayerData.job
-    if not job or type(call.jobs) ~= 'table' then return false end
-    return lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)
+    return callTargetsJob(player and player.PlayerData and player.PlayerData.job, call)
 end
 
 ---@param id number

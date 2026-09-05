@@ -264,6 +264,21 @@ local function tagCallForUi(call)
     return call
 end
 
+--- Is this player a recipient of the call — by job TYPE or by job NAME?
+--- Same rule the server applies (callTargetsJob in server/main.lua). Matching
+--- on the type alone refused every call addressed by name, which is what the
+--- respond keybind did: the popup arrived, the board listed it, and pressing
+--- the key did nothing at all because 'renegaderacers' is not 'leo'.
+---@param call table|nil
+---@return boolean
+local function isCallForPlayer(call)
+    local job = PlayerData and PlayerData.job
+    if type(job) ~= 'table' or type(call) ~= 'table' or type(call.jobs) ~= 'table' then
+        return false
+    end
+    return lib.table.contains(call.jobs, job.type) or lib.table.contains(call.jobs, job.name)
+end
+
 ---@param calls table|nil
 ---@return table|nil
 local function tagCallsForUi(calls)
@@ -338,7 +353,7 @@ local function setWaypoint()
     local at = alertPosition(data)
     if not at then return end -- an alert without a position cannot be routed to
 
-    if not waypointCooldown and lib.table.contains(data.jobs, PlayerData.job and PlayerData.job.type) then
+    if not waypointCooldown and isCallForPlayer(data) then
         SetNewWaypoint(at.x, at.y)
         TriggerServerEvent('ps-dispatch:server:attach', data.id, PlayerData)
         -- Local bridge event so companion resources (e.g. ps-mdt's automatic
