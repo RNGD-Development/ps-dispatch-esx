@@ -164,9 +164,18 @@
         {#if isCritical}<span class="pd-badge pd-badge--critical flex-shrink-0">Critical</span>{/if}
         <span class="pd-row-msg flex-1 min-w-0">{dispatch.message}</span>
       </div>
-      <div class="flex items-center gap-[8px] min-w-0">
+      <!-- The street is the one thing on this line allowed to give up space,
+           and the line clips. Both are needed: everything else here is
+           flex-shrink-0, so once the street had shrunk to nothing the time and
+           the badges after it kept their width and simply ran out of the
+           column — painting on top of the unit count and the chevron beside
+           it, which reads as two rows drawn over each other. It runs out
+           sooner than it looks: this line is at full capacity as soon as a
+           call has a street of ordinary length and a unit attached, and the
+           time restates itself at a different width every few seconds. -->
+      <div class="flex items-center gap-[8px] min-w-0 overflow-hidden">
         <span class="pd-kv-label flex-shrink-0">#{dispatch.id}</span>
-        {#if dispatch.street}<span class="text-[10px] opacity-40 truncate">{dispatch.street}</span>{/if}
+        {#if dispatch.street}<span class="text-[10px] opacity-40 truncate flex-1 min-w-0">{dispatch.street}</span>{/if}
         <span class="pd-time flex-shrink-0">{timeAgo(dispatch.time)}</span>
         {#if $PINNED_CODES.includes(dispatch.codeName)}
           <span class="pd-badge pd-badge--red flex-shrink-0" title="Pinned critical call"><i class="fas fa-thumbtack"></i></span>

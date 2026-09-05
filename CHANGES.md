@@ -56,3 +56,17 @@ resources are not installed.
 
 `LICENSE` is untouched, and the `author "Project Sloth & OK1ez"` field in
 `fxmanifest.lua` is unchanged.
+
+---
+
+## 2026-09-05 — Fixes found while running the bridge (RNGD-Development)
+
+Three defects in upstream code, all of them reachable on QBCore as well as ESX.
+They are recorded here separately because they are not part of the bridge.
+
+| File | Description |
+| --- | --- |
+| `client/main.lua` | The respond keybind matched a call's target jobs against the player's job TYPE only, while the server accepts a recipient on the type or the job NAME. Any alert addressed by name — every alert on a framework without QBCore's `leo`/`ems` types — was delivered, listed, and then silently unresponsive. Now checks by the server's own rule. |
+| `server/main.lua` | `getLatestDispatch` returned the newest call on the server rather than the newest call the asking player was sent, so on a server with more than one dispatch job the respond keybind regularly refused another job's alert. It now answers per player, sanitised through `publicCall` like every other outbound call. |
+| `client/main.lua`, `server/main.lua` | Attaching from the menu sent the attach and a list refresh as two independent messages, and the refresh could be answered from a board built before the attach landed. Since attaching deliberately takes a unit off every other call, repainting from that list showed the unit on two calls at once with the old one never released. Attach and detach are now one round trip that answers with the refreshed board; the two net events are unchanged for other resources and share the same implementation. |
+| `ui/src/components/CallRow.svelte` | On a call row's meta line every element was `flex-shrink-0` except the street, so once the street had shrunk away the time and the badges after it ran out of the column and painted over the unit count and the chevron beside them — two rows apparently drawn over each other. The street now owns the leftover space and the line clips. `html/` is the rebuilt bundle. |
