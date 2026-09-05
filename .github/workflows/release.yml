@@ -1,15 +1,18 @@
 name: Release (Auto-Bump)
 
-# Jeder Push auf main erzeugt ein Release: Patch-Version hochzaehlen, UI bauen,
-# gebautes html/ zurueck committen, taggen, ZIP veroeffentlichen.
+# Manuell ausgeloest (Actions -> Release (Auto-Bump) -> Run workflow) erzeugt
+# dies ein Release: Patch-Version hochzaehlen, UI bauen, gebautes html/
+# zurueck committen, taggen, ZIP veroeffentlichen.
+#
+# In diesem Fork bewusst NICHT mehr an "push auf main" gehaengt (Upstream-
+# Verhalten): fuer ein privates Admin-Fork, das per Dateikopie auf den eigenen
+# Server deployt wird, wuerde das bei jedem Push einen automatischen
+# github-actions[bot]-Commit erzeugen.
 #
 # Das gebaute html/ wird bewusst mit committet. Sonst laeuft der Repo-Stand
 # gegenueber ui/src auseinander und niemand merkt es, weil das ZIP ja korrekt
 # ist — genau so ist platesEnabled aus den 1.0.x-Releases verschwunden.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       allow_series_change:
