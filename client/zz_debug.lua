@@ -44,6 +44,32 @@ RegisterCommand('dispatchdebug', function()
     print('[ps-dispatch:debug] ────────────────────────────')
 end, false)
 
+-- What does the server actually hand back for the menu, and does this player
+-- pass the gate the menu applies before opening?
+RegisterCommand('dispatchcalls', function()
+    print('[ps-dispatch:debug] ─────────── calls ───────────')
+    dump('PlayerData.job.name', PlayerData and PlayerData.job and PlayerData.job.name)
+    dump('PlayerData.job.type', PlayerData and PlayerData.job and PlayerData.job.type)
+
+    local calls = lib.callback.await('ps-dispatch:callback:getCalls', false)
+    dump('getCalls type', type(calls))
+    dump('getCalls count', type(calls) == 'table' and #calls or 'n/a')
+
+    if type(calls) == 'table' then
+        for i = 1, #calls do
+            local c = calls[i]
+            print(('[ps-dispatch:debug]   [%d] id=%s code=%s codeName=%s msg=%s jobs=%s')
+                :format(i, tostring(c.id), tostring(c.code), tostring(c.codeName),
+                    tostring(c.message),
+                    type(c.jobs) == 'table' and table.concat(c.jobs, '/') or tostring(c.jobs)))
+        end
+    end
+
+    local latest = lib.callback.await('ps-dispatch:callback:getLatestDispatch', false)
+    dump('getLatestDispatch', latest and latest.message or 'nil')
+    print('[ps-dispatch:debug] ────────────────────────────')
+end, false)
+
 -- Did the ESX events actually reach this resource? These print once each.
 AddEventHandler('esx:playerLoaded', function()
     print('[ps-dispatch:debug] EVENT esx:playerLoaded RECEIVED')

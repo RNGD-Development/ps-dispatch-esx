@@ -236,6 +236,42 @@ local function isJobValid(data)
     return false
 end
 
+--- The NUI filters the call board with `dispatch.jobs.includes(player.job.type)`
+--- — job TYPES only. The server accepts a call for this player on either the
+--- type or the job NAME, and any resource that targets alerts by job name
+--- (which is the norm outside QBCore, where 'leo'/'ems' types don't exist)
+--- sends names. The result was a unit that got the popup, was listed as a
+--- valid recipient server-side, and then found the board empty.
+---
+--- Adding this player's own type to a call they are already a recipient of by
+--- name makes the UI agree with the server. It is display-only: the server's
+--- decision about who receives a call is untouched, and a call this client was
+--- never sent cannot be tagged, because it never arrives here in the first
+--- place.
+---@param call table|nil
+---@return table|nil
+local function tagCallForUi(call)
+    local job = PlayerData and PlayerData.job
+    local jobType, jobName = job and job.type, job and job.name
+    if not jobType or not jobName or jobType == jobName then return call end
+
+    local jobs = type(call) == 'table' and call.jobs or nil
+    if type(jobs) == 'table'
+        and lib.table.contains(jobs, jobName)
+        and not lib.table.contains(jobs, jobType) then
+        jobs[#jobs + 1] = jobType
+    end
+    return call
+end
+
+---@param calls table|nil
+---@return table|nil
+local function tagCallsForUi(calls)
+    if type(calls) ~= 'table' then return calls end
+    for i = 1, #calls do tagCallForUi(calls[i]) end
+    return calls
+end
+
 -- The call the on-screen alert belongs to, and when that alert disappears.
 -- Opening the menu while an alert is up jumps straight to that call instead
 -- of dropping the officer into an unsorted list.
@@ -269,7 +305,7 @@ local function openMenu()
     -- The suppression needs to know which calls this unit is on, and the menu
     -- payload already carries every call's unit list.
     if SyncAttachedCalls then SyncAttachedCalls(calls) end
-    SendNUIMessage({ action = 'setDispatchs', data = calls, })
+    SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(calls), })
     -- Alert still on screen? Open straight onto that call, expanded.
     SendNUIMessage({ action = 'focusCall', data = currentAlertCallId() })
     -- Those popups have served their purpose now that the same calls are
@@ -567,7 +603,7 @@ RegisterNetEvent('ps-dispatch:client:notify', function(data)
     SendNUIMessage({
         action = 'newCall',
         data = {
-            data = data,
+            data = tagCallForUi(data),
             timer = timer,
         }
     })
@@ -629,7 +665,7 @@ RegisterNetEvent('ps-dispatch:client:openMenu', function(data)
         -- the source of truth — the NUI store is empty after any UI reload.
         if PushPlateHits then PushPlateHits() end
         if SyncAttachedCalls then SyncAttachedCalls(data) end
-        SendNUIMessage({ action = 'setDispatchs', data = data, })
+        SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(data), })
     end
 end)
 
@@ -646,7 +682,18 @@ AddEventHandler('QBCore:Client:OnPlayerUnload', removeZones)
 -- ESX Legacy equivalents, registered alongside rather than instead of the
 -- above: only one framework's events ever fire on a given server, so both sets
 -- can sit here permanently.
-AddEventHandler('esx:setJob', function() setupDispatch() end)
+-- Deferred on purpose: es_extended applies the new job to ESX.PlayerData in
+-- its OWN handler for this same event, and handler order between resources is
+-- not guaranteed. Reading it in the same tick returned the previous job, so
+-- a /setjob into a dispatch job left the board refusing to open until the
+-- resource was restarted. This is the same delay the QBX handlers in
+-- client/plates.lua and client/incidents.lua already use, for the same reason.
+AddEventHandler('esx:setJob', function()
+    CreateThread(function()
+        Wait(500)
+        setupDispatch()
+    end)
+end)
 
 AddEventHandler('esx:playerLoaded', function()
     setupDispatch()
@@ -760,7 +807,7 @@ end)
 RegisterNUICallback("refreshAlerts", function(data, cb)
     lib.notify({ description = locale('alerts_refreshed'), position = 'top', type = 'success' })
     local data = lib.callback.await('ps-dispatch:callback:getCalls', false)
-    SendNUIMessage({ action = 'setDispatchs', data = data, })
+    SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(data), })
     cb("ok")
 end)
 
