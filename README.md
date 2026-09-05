@@ -39,6 +39,12 @@ ensure ps-dispatch
 
 `Config.Jobs` decides who receives alerts at all. Everything else is optional.
 
+## Supported Frameworks
+
+ps-dispatch supports both **QBCore/QBX** and **ESX Legacy**. The active framework is detected automatically at runtime — there is no configuration switch. On startup, the resource checks the state of `qbx_core`, `qb-core`, and `es_extended` (in that order) and uses whichever is running. QBCore/QBX behaviour is unchanged; ESX is supported as a new first-class option through an additive bridge layer.
+
+No new dependency is introduced: `es_extended` and `oxmysql` are already available on ESX servers and are reached through their exports. The dispatch system itself — alerts, the call board, plate log, major incidents, and all exports — works identically on both frameworks.
+
 ## Configuration
 
 Everything lives in `shared/config.lua`.
@@ -53,6 +59,39 @@ Config.FilteredBroadcast = true           -- send only to eligible players
 ```
 
 `FilteredBroadcast` matters on a busy server: with it off, every alert goes to every player and each client throws away what isn't theirs — bandwidth and event handling that scales with your slot count for no benefit.
+
+### ESX Legacy configuration
+
+On ESX servers, two additional settings in `shared/config.lua` control framework-specific behaviour:
+
+```lua
+-- Job type mapping: ESX job names to dispatch job types ('leo', 'ems', etc.)
+-- QBCore jobs carry a built-in type; ESX does not, so this map derives it here.
+-- A job not listed keeps its own name as its type, which means it never matches
+-- the leo/ems special-casing rather than being wrongly caught by it.
+Config.ESXJobTypes = {
+    police = 'leo',      -- ESX job → dispatch type
+    ambulance = 'ems',
+}
+
+-- Duty status check (server-side, runs once per player per broadcast)
+-- ESX has no built-in on/off-duty concept; this hook is called when Config.OnDutyOnly
+-- is enabled to decide whether a player sees alerts. Default returns true (always on duty).
+-- To integrate with your own duty system, return a boolean or replace with a lookup.
+Config.ESXDutyCheck = function(identifier, xPlayer)
+    return true
+end
+
+-- Callsign lookup (server-side, runs once per player per broadcast)
+-- ESX has no callsign equivalent. Return one here and it is used like QBCore's
+-- metadata.callsign — on officer-down alerts and in the name of whoever declared
+-- a major incident. Returning nil uses no callsign (the default).
+Config.ESXGetCallsign = function(identifier, xPlayer)
+    return nil
+end
+```
+
+On QBCore/QBX servers, these settings are ignored.
 
 ### Keybinds and commands
 
@@ -448,6 +487,12 @@ Information about each parameter is in the `alerts.lua` file.
   - Replace "nil" with the number of seconds you want the calls to display. For example, setting "alertTime = 25" means calls will be shown for 25 seconds.
 
 ## Credits
+
+Original authors: **Project Sloth & OK1ez**. ESX Legacy bridge contributed by **RNGD-Development**.
+
+For full attribution including the ESX community fork credit, see [`CREDITS.md`](CREDITS.md).
+
+Individual contributors:
 * [OK1ez](https://github.com/OK1ez)
 * [Candrex](https://github.com/CandrexDev)
 * [Lenzh](https://github.com/Lenzh)
