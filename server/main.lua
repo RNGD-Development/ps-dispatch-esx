@@ -350,8 +350,13 @@ RegisterServerEvent('ps-dispatch:server:notify', function(data)
     broadcastCall(data)
 end)
 
-RegisterServerEvent('ps-dispatch:server:attach', function(id, player)
-    local src = source
+--- Put a unit on a call, taking it off every other one.
+--- The fire-and-forget net event below and the menu's callback share this, so
+--- there is exactly one place that decides what "attached" means.
+---@param src number the attaching player
+---@param id number call to join
+---@param player table that player's data, as the client holds it
+local function attachUnitToCall(src, id, player)
     if type(player) == 'table' and player.citizenid then
         attachedBy[src] = player.citizenid
         -- One call per unit: attaching somewhere implicitly detaches
@@ -392,9 +397,18 @@ RegisterServerEvent('ps-dispatch:server:attach', function(id, player)
             return
         end
     end
+end
+
+RegisterServerEvent('ps-dispatch:server:attach', function(id, player)
+    attachUnitToCall(source, id, player)
 end)
 
-RegisterServerEvent('ps-dispatch:server:detach', function(id, player)
+--- Take a unit off a call.
+---@param src number
+---@param id number
+---@param player table
+local function detachUnitFromCall(src, id, player)
+    if type(player) ~= 'table' or not player.citizenid then return end
     for i = #calls, 1, -1 do
         if calls[i]['id'] == id then
             if calls[i]['units'] and (#calls[i]['units'] or 0) > 0 then
@@ -408,6 +422,10 @@ RegisterServerEvent('ps-dispatch:server:detach', function(id, player)
             return
         end
     end
+end
+
+RegisterServerEvent('ps-dispatch:server:detach', function(id, player)
+    detachUnitFromCall(source, id, player)
 end)
 
 -- Callbacks
@@ -442,6 +460,26 @@ local function publicCalls()
 end
 
 lib.callback.register('ps-dispatch:callback:getCalls', function(source)
+    return publicCalls()
+end)
+
+--- Attaching and detaching from the menu. Same work as the two net events, but
+--- the answer is the refreshed board.
+---
+--- The menu used to fire the event and then ask for the list in a second,
+--- independent message. Those two race: the list can be built before the attach
+--- lands, and the client then repaints a board where the unit is still on the
+--- call they just left and not yet on the one they just took. Since attaching
+--- deliberately takes a unit off every other call, that showed as being on two
+--- calls at once, with the old one never handed back. One round trip cannot
+--- race itself.
+lib.callback.register('ps-dispatch:callback:attach', function(source, id, player)
+    attachUnitToCall(source, id, player)
+    return publicCalls()
+end)
+
+lib.callback.register('ps-dispatch:callback:detach', function(source, id, player)
+    detachUnitFromCall(source, id, player)
     return publicCalls()
 end)
 

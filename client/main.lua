@@ -760,20 +760,41 @@ RegisterNUICallback("hideUI", function(_, cb)
     cb("ok")
 end)
 
+-- The menu sends attach/detach and a list refresh as two separate messages.
+-- Attaching is a round trip that comes back with the board already updated, so
+-- a refresh that overtakes it would repaint from a list the server built before
+-- the change — putting the unit back on the call it just left. This counts the
+-- round trips in flight so the refresh can wait for them.
+local unitChangesInFlight = 0
+
 RegisterNUICallback("attachUnit", function(data, cb)
-    TriggerServerEvent('ps-dispatch:server:attach', data.id, PlayerData)
     local at = alertPosition(data)
     if at then SetNewWaypoint(at.x, at.y) end
     TriggerEvent('ps-dispatch:client:selfAttach', data.id)
     SendNUIMessage({ action = 'callResponded', data = data.id })
+
+    unitChangesInFlight = unitChangesInFlight + 1
+    local calls = lib.callback.await('ps-dispatch:callback:attach', false, data.id, PlayerData)
+    unitChangesInFlight = unitChangesInFlight - 1
+    -- Attaching takes this unit off every other call, so the whole board moves,
+    -- not just this row.
+    if type(calls) == 'table' then
+        SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(calls) })
+    end
     cb("ok")
 end)
 
 RegisterNUICallback("detachUnit", function(data, cb)
-    TriggerServerEvent('ps-dispatch:server:detach', data.id, PlayerData)
     DeleteWaypoint()
     TriggerEvent('ps-dispatch:client:selfDetach', data.id)
     SendNUIMessage({ action = 'callUnresponded', data = data.id })
+
+    unitChangesInFlight = unitChangesInFlight + 1
+    local calls = lib.callback.await('ps-dispatch:callback:detach', false, data.id, PlayerData)
+    unitChangesInFlight = unitChangesInFlight - 1
+    if type(calls) == 'table' then
+        SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(calls) })
+    end
     cb("ok")
 end)
 
@@ -821,6 +842,11 @@ end)
 
 RegisterNUICallback("refreshAlerts", function(data, cb)
     lib.notify({ description = locale('alerts_refreshed'), position = 'top', type = 'success' })
+    -- Let an attach/detach finish first: its answer is newer than anything this
+    -- refresh could ask for, and both end in a setDispatchs. Bounded, because a
+    -- server that never answers must not leave the refresh button dead.
+    local deadline = GetGameTimer() + 2000
+    while unitChangesInFlight > 0 and GetGameTimer() < deadline do Wait(10) end
     local data = lib.callback.await('ps-dispatch:callback:getCalls', false)
     SendNUIMessage({ action = 'setDispatchs', data = tagCallsForUi(data), })
     cb("ok")
