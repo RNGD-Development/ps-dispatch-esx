@@ -101,7 +101,8 @@ Config.PinnedCodes = { 'officerdown', 'officerdistress', 'emsdown' }
 
 -- Send alerts only to players whose job matches the call (server-side filter)
 -- instead of broadcasting to every client. Set false to restore the old
--- behaviour (e.g. when not running QBCore).
+-- behaviour (e.g. when running no supported framework at all — QBCore, QBX and
+-- ESX Legacy are all filtered).
 Config.FilteredBroadcast = true
 
 -- Maximum alert popups stacked on screen at once; older ones collapse into a
@@ -179,8 +180,81 @@ Config.AlertSounds = {
 Config.OnDutyOnly = true -- Set true if only on duty players can see the alert
 Config.Jobs = { -- Job Types or names that can access the dispatch menu. If you want to allow more jobs to see certain dispatch alerts. Go to alerts.lua and add the job name to the alert.
     "leo",
-    "ems"
+    "ems",
+
+    -- TEMPORARY (test setup, remove before production): lets the custom
+    -- "renegaderacers" job open the dispatch menu, so its own crime script can
+    -- be tested solo — the same character both causes the alert and receives
+    -- it. Remove this together with the matching Config.ESXJobTypes entry
+    -- below once real dispatch jobs (police / ambulance) are configured.
+    "renegaderacers",
 }
+
+-- ═══════════════════════════════════════════════════════════════════════════
+--  ESX Legacy
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Only read when ESX is the detected framework. On QBCore/QBX every setting in
+-- this block is ignored, so it is safe to leave as-is.
+
+-- ── Job types ───────────────────────────────────────────────────────────────
+-- QBCore jobs carry a `type` ('leo', 'ems') that ps-dispatch gates on
+-- throughout. ESX jobs have no such field, so the mapping is made here:
+--
+--   ["<esx job name>"] = "<dispatch job type>"
+--
+-- EXAMPLE VALUES — edit these to match the job names on YOUR server. A job
+-- that is not listed keeps its own name as its type, which simply means it
+-- never matches the leo/ems special-casing rather than being wrongly treated
+-- as police.
+Config.ESXJobTypes = {
+    police = 'leo',
+    ambulance = 'ems',
+
+    -- TEMPORARY (test setup, remove before production): makes the custom
+    -- "renegaderacers" job count as law enforcement, which is what actually
+    -- delivers the leo-targeted alerts its crime script sends. Remove this
+    -- together with the Config.Jobs entry above.
+    renegaderacers = 'leo',
+}
+
+-- ── Duty status ─────────────────────────────────────────────────────────────
+-- ESX Legacy has no generic on/off-duty concept, so Config.OnDutyOnly has no
+-- effect on ESX unless this hook is replaced with a real check. The default
+-- treats everyone as on duty.
+--
+-- Runs SERVER-SIDE, once per player per broadcast — keep it synchronous and
+-- cheap (a table lookup, a state bag). Do not query a database in here.
+--
+--   identifier  the ESX identifier (e.g. "char1:1100001...")
+--   xPlayer     the ESX player object, for job/group lookups
+--
+-- Example, integrating an esx_service-style duty list:
+--   Config.ESXDutyCheck = function(identifier, xPlayer)
+--       return MyDutyList[identifier] == true
+--   end
+--
+-- A duty system with no ESX event to hang off can also push changes straight
+-- to a client at any time:
+--   TriggerClientEvent('ps-dispatch:client:setDuty', src, true)
+Config.ESXDutyCheck = function(identifier, xPlayer)
+    return true
+end
+
+-- ── Callsigns ───────────────────────────────────────────────────────────────
+-- ESX has no callsign equivalent. Return one here and it is used exactly as
+-- QBCore's metadata.callsign is — on officer-down alerts and in the name of
+-- whoever declared a major incident ("60 · Sergeant · J. Walker"). Returning
+-- nil, the default, simply leaves that part of the line out.
+--
+-- Same rules as the duty hook: server-side, synchronous, cheap.
+--
+-- Example, reading a callsign your own resource keeps in memory:
+--   Config.ESXGetCallsign = function(identifier, xPlayer)
+--       return MyCallsigns[identifier]
+--   end
+Config.ESXGetCallsign = function(identifier, xPlayer)
+    return nil
+end
 
 Config.AlertCommandCooldown = 60 -- this would make the command work every 60 seconds to avoid spamming
 
