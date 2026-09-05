@@ -1,6 +1,6 @@
 # ps-dispatch
 
-Dispatch and alert system for FiveM. Built with Svelte and Lua. Works on QBCore and QBX.
+Dispatch and alert system for FiveM. Built with Svelte and Lua. Works on QBCore, QBX, and ESX Legacy.
 
 ## What is this
 
@@ -12,7 +12,7 @@ Alerts are more than notifications here. A call carries the vehicle's plate draw
 
 | Resource | Why |
 |----------|-----|
-| `qb-core` or `qbx_core` | player data, jobs, grades |
+| `qb-core`, `qbx_core`, or `es_extended` (ESX Legacy) | player data, jobs, grades — whichever is running is detected automatically |
 | `ox_lib` | callbacks, notifications, locales, keybinds |
 | `lsn-radar` [DOWNLOAD](https://github.com/LeSiiN/lsn-radar) | Police Radar, Perfect Fit for both ps-mdt and ps-dispatch |
 | `PolyZone` | alert zones |
