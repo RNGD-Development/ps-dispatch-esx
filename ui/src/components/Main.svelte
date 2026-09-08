@@ -1,7 +1,7 @@
 <script>
   import { afterUpdate, onDestroy } from 'svelte';
   import Plate from './Plate.svelte';
-  import { DISPATCH, removeDispatch, RESPOND_KEYBIND, MAX_VISIBLE_ALERTS, ALERT_POSITION, MAP_IMAGE, THUMBS_ENABLED, COMPACT_ALERTS, ALERT_DURATION, REDUCED_MOTION, UI_SCALE } from '@store/stores';
+  import { DISPATCH, removeDispatch, RESPOND_KEYBIND, MAX_VISIBLE_ALERTS, ALERT_POSITION, MAP_IMAGE, THUMBS_ENABLED, COMPACT_ALERTS, ALERT_DURATION, REDUCED_MOTION, UI_SCALE, Locale } from '@store/stores';
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { DUR, EASE_OUT, edgeFor, signalIn, signalOut } from '@utils/motion';
@@ -75,10 +75,10 @@
     shotgun: 'fa-gun', sniper: 'fa-crosshairs', heavy: 'fa-burst',
     taser: 'fa-bolt',
   };
-  const WEAPON_LABEL = {
-    pistol: 'Handgun', smg: 'Submachine gun', rifle: 'Rifle',
-    shotgun: 'Shotgun', sniper: 'Long rifle', heavy: 'Heavy weapon',
-    taser: 'Taser',
+  $: WEAPON_LABEL = {
+    pistol: $Locale.weapon_pistol, smg: $Locale.weapon_smg, rifle: $Locale.weapon_rifle,
+    shotgun: $Locale.weapon_shotgun, sniper: $Locale.weapon_sniper, heavy: $Locale.weapon_heavy,
+    taser: $Locale.weapon_taser,
   };
 
   function personLine(d) {
@@ -92,7 +92,7 @@
     const out = [];
     if (d.color) out.push(d.color);
     if (d.class) out.push(d.class);
-    if (d.doors) out.push(`${d.doors} doors`);
+    if (d.doors) out.push(`${d.doors} ${$Locale.ui_doors_suffix}`);
     return out;
   }
 </script>
@@ -100,7 +100,7 @@
 <div class="w-screen h-screen flex {wrapClasses} pointer-events-none p-[16px]" style="transform:scale({$UI_SCALE});transform-origin:{$ALERT_POSITION.includes('left') ? 'left' : 'right'} top;">
   <div class="flex flex-col gap-[7px] {hPos === 'right' ? 'items-end' : hPos === 'left' ? 'items-start' : 'items-center'}">
     {#if hiddenCount > 0 && vPos === 'top'}
-      <p class="pd-more" transition:fly={{ y: -6, duration: DUR.fast, easing: EASE_OUT }}>+{hiddenCount} more active {hiddenCount === 1 ? 'alert' : 'alerts'}</p>
+      <p class="pd-more" transition:fly={{ y: -6, duration: DUR.fast, easing: EASE_OUT }}>+{hiddenCount} {$Locale[hiddenCount === 1 ? 'ui_more_active_alert_one' : 'ui_more_active_alert_other']}</p>
     {/if}
 
     {#each visible as dispatch (dispatch.data.id)}
@@ -120,7 +120,7 @@
                ones (repeat count, escalation, hotspot) move to the badge row
                below, so what happened is never the part that gets cut. -->
           <span class="pd-badge {(dispatch.data.priority ?? 3) <= 1 ? 'pd-badge--red' : 'pd-badge--cyan'} flex-shrink-0">{dispatch.data.code}</span>
-          {#if (dispatch.data.priority ?? 3) <= 0}<span class="pd-badge pd-badge--critical flex-shrink-0">Critical</span>{/if}
+          {#if (dispatch.data.priority ?? 3) <= 0}<span class="pd-badge pd-badge--critical flex-shrink-0">{$Locale.ui_critical}</span>{/if}
           <span class="pd-title truncate flex-1 min-w-0">{dispatch.data.message}</span>
           <span class="pd-time flex-shrink-0">{timeAgo(dispatch.data.time)}</span>
         </div>
@@ -128,13 +128,13 @@
         {#if (dispatch.data.count || 1) > 1 || dispatch.data.escalated || dispatch.data.hotspot}
           <div class="pd-tagrow">
             {#if (dispatch.data.count || 1) > 1}
-              <span class="pd-badge pd-badge--red">×{dispatch.data.count} reports</span>
+              <span class="pd-badge pd-badge--red">×{dispatch.data.count} {$Locale.ui_reports_suffix}</span>
             {/if}
             {#if dispatch.data.escalated}
-              <span class="pd-badge pd-badge--red" title="Auto-escalated after repeated reports"><i class="fas fa-arrow-up mr-[3px]"></i>Escalated</span>
+              <span class="pd-badge pd-badge--red" title={$Locale.ui_auto_escalated}><i class="fas fa-arrow-up mr-[3px]"></i>{$Locale.ui_escalated}</span>
             {/if}
             {#if dispatch.data.hotspot}
-              <span class="pd-badge pd-badge--purple" title="Repeated incidents on this street"><i class="fas fa-fire mr-[3px]"></i>×{dispatch.data.hotspot} on this street</span>
+              <span class="pd-badge pd-badge--purple" title={$Locale.ui_repeated_incidents_street}><i class="fas fa-fire mr-[3px]"></i>×{dispatch.data.hotspot} {$Locale.ui_on_this_street}</span>
             {/if}
           </div>
         {/if}
@@ -155,7 +155,7 @@
             <div class="pd-strip">
               <div class="pd-strip-row">
                 <i class="fas fa-location-dot text-[10px] opacity-50"></i>
-                <span class="pd-strip-title">{dispatch.data.street || 'Unknown location'}</span>
+                <span class="pd-strip-title">{dispatch.data.street || $Locale.ui_unknown_location}</span>
                 {#if dispatch.data.distance != null}
                   <span class="pd-dist"><i class="fas fa-route"></i>{fmtDistance(dispatch.data.distance)}</span>
                 {/if}
@@ -171,7 +171,7 @@
             <div class="pd-strip">
               <div class="pd-strip-row">
                 <i class="fas fa-car text-[10px] opacity-50"></i>
-                <span class="pd-strip-title pd-strip-title--tight">{dispatch.data.vehicle || 'Unknown vehicle'}</span>
+                <span class="pd-strip-title pd-strip-title--tight">{dispatch.data.vehicle || $Locale.ui_unknown_vehicle}</span>
                 {#if dispatch.data.plate}
                   <Plate plate={dispatch.data.plate} index={dispatch.data.plateIndex} />
                 {/if}
@@ -193,13 +193,13 @@
               <div class="pd-strip-row">
                 <i class="fas {WEAPON_ICON[dispatch.data.weaponClass] || 'fa-gun'} text-[10px]"></i>
                 <span class="pd-strip-title pd-strip-title--tight">
-                  {WEAPON_LABEL[dispatch.data.weaponClass] || dispatch.data.weapon || 'Shots fired'}
+                  {WEAPON_LABEL[dispatch.data.weaponClass] || dispatch.data.weapon || $Locale.ui_shots_fired}
                 </span>
                 {#if dispatch.data.weapon && WEAPON_LABEL[dispatch.data.weaponClass]}
                   <span class="pd-weap-model">{dispatch.data.weapon}</span>
                 {/if}
                 {#if dispatch.data.automaticGunFire}
-                  <span class="pd-badge pd-badge--red">Automatic</span>
+                  <span class="pd-badge pd-badge--red">{$Locale.ui_automatic}</span>
                 {/if}
               </div>
             </div>
@@ -232,7 +232,7 @@
 
           <!-- Live responder count: fed by the server's unitCount broadcasts -->
           {#if (dispatch.data.unitCount || 0) > 0}
-            <div class="pd-person"><i class="fas fa-user-group"></i><span class="text-[#4ade80]">{dispatch.data.unitCount} responding</span></div>
+            <div class="pd-person"><i class="fas fa-user-group"></i><span class="text-[#4ade80]">{dispatch.data.unitCount} {$Locale.ui_responding_suffix}</span></div>
           {/if}
 
           {#if dispatch.data.footer}
@@ -252,11 +252,11 @@
                  Confirmation instead. -->
             <div class="pd-assigned">
               <i class="fas fa-headset"></i>
-              <span>Assigned by dispatch</span>
-              <span class="pd-assigned-sub"><i class="fas fa-location-arrow"></i> waypoint set</span>
+              <span>{$Locale.ui_assigned_by_dispatch}</span>
+              <span class="pd-assigned-sub"><i class="fas fa-location-arrow"></i> {$Locale.ui_waypoint_set}</span>
             </div>
           {:else if dispatch.data.id === newestId && !dispatch.data.responded}
-            <div class="pd-respond"><span class="pd-kbd">{$RESPOND_KEYBIND}</span> Respond — attach &amp; set waypoint</div>
+            <div class="pd-respond"><span class="pd-kbd">{$RESPOND_KEYBIND}</span> {$Locale.ui_respond_action}</div>
           {/if}
         </div>
 
@@ -267,7 +267,7 @@
     {/each}
 
     {#if hiddenCount > 0 && vPos !== 'top'}
-      <p class="pd-more" transition:fly={{ y: 6, duration: DUR.fast, easing: EASE_OUT }}>+{hiddenCount} more active {hiddenCount === 1 ? 'alert' : 'alerts'}</p>
+      <p class="pd-more" transition:fly={{ y: 6, duration: DUR.fast, easing: EASE_OUT }}>+{hiddenCount} {$Locale[hiddenCount === 1 ? 'ui_more_active_alert_one' : 'ui_more_active_alert_other']}</p>
     {/if}
   </div>
 </div>

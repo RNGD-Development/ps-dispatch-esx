@@ -95,15 +95,9 @@ interface LOCALE_DATA {
   unit: string,
   units: string,
   additionals: string,
-  time_just_now?: string,
-  time_seconds_ago?: string,
-  time_minute_ago?: string,
-  time_minutes_ago?: string,
-  time_today?: string,
-  time_yesterday?: string,
-  time_at?: string,
-  time_unknown?: string,
-  time_invalid_date?: string,
+  // The full flattened locales/*.json for the active language (lib.getLocales())
+  // — dozens more UI/time/weapon/alert-type keys beyond the ones named above.
+  [key: string]: string,
 }
 
 export const Locale = writable<LOCALE_DATA>(null);

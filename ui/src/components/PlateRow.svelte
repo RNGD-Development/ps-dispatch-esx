@@ -4,6 +4,7 @@
   import { timeAgo } from '@utils/timeAgo'
   import { slide } from 'svelte/transition'
   import { DUR, EASE_OUT } from '@utils/motion'
+  import { Locale } from '@store/stores'
 
   export let hit;
   export let expanded = false;
@@ -42,7 +43,7 @@
     confirmBackup = false;
     const res = await SendNUI('plateBackup', { id: hit.id });
     if (res && res.ok === false) {
-      backupError = res.message || 'Could not request backup';
+      backupError = res.message || $Locale.ui_could_not_request_backup;
       setTimeout(() => backupError = '', 2600);
     } else {
       backupSent = true;
@@ -67,7 +68,7 @@
           class:pd-copy--done={copied}
           role="button"
           tabindex="-1"
-          title={copied ? 'Copied' : 'Copy plate'}
+          title={copied ? $Locale.ui_copied : $Locale.ui_copy_plate}
           on:click|stopPropagation={copyPlate}
           on:keydown|stopPropagation
         >
@@ -107,7 +108,7 @@
         <div class="pd-strip">
           <div class="pd-strip-row">
             <i class="fas fa-car text-[10px] opacity-50"></i>
-            <span class="pd-strip-title">{hit.vehicle || 'Unknown vehicle'}</span>
+            <span class="pd-strip-title">{hit.vehicle || $Locale.ui_unknown_vehicle}</span>
           </div>
           {#if hit.owner}
             <div class="pd-strip-badges">
@@ -132,15 +133,15 @@
           on:click|stopPropagation={requestBackup}
         >
           {#if backupSent}
-            <i class="fas fa-circle-check"></i> Backup requested
+            <i class="fas fa-circle-check"></i> {$Locale.ui_backup_requested}
           {:else if confirmBackup}
-            <i class="fas fa-triangle-exclamation"></i> Confirm — alert all units
+            <i class="fas fa-triangle-exclamation"></i> {$Locale.ui_confirm_alert_all_units}
           {:else}
-            <i class="fas fa-users-line"></i> Request backup
+            <i class="fas fa-users-line"></i> {$Locale.ui_request_backup}
           {/if}
         </button>
         <button class="pd-btn" on:click|stopPropagation={() => SendNUI('clearPlateHits', { id: hit.id })}>
-          <i class="fas fa-xmark"></i> Dismiss
+          <i class="fas fa-xmark"></i> {$Locale.ui_dismiss}
         </button>
       </div>
     </div>

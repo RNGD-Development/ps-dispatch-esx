@@ -1,5 +1,5 @@
 <script>
-  import { DISPATCH_MENU, DISPATCH_MUTED, DISPATCH_DISABLED, STATS, ALERT_POSITION, MAX_VISIBLE_ALERTS, THUMBS_ENABLED, BLIPS_ENABLED, PRIORITY_ONLY, COMPACT_ALERTS, MAP_IMAGE, FOCUS_CALL, OVERLAY_OPEN, ALERT_TYPES, MUTED_CODES, ALERT_DURATION, REDUCED_MOTION, processedDispatchMenu, PLATE_HITS, MENU_TAB, PLATES_ENABLED, INCIDENTS, MAY_DECLARE, PLAYER, UI_SCALE } from '@store/stores';
+  import { DISPATCH_MENU, DISPATCH_MUTED, DISPATCH_DISABLED, STATS, ALERT_POSITION, MAX_VISIBLE_ALERTS, THUMBS_ENABLED, BLIPS_ENABLED, PRIORITY_ONLY, COMPACT_ALERTS, MAP_IMAGE, FOCUS_CALL, OVERLAY_OPEN, ALERT_TYPES, MUTED_CODES, ALERT_DURATION, REDUCED_MOTION, processedDispatchMenu, PLATE_HITS, MENU_TAB, PLATES_ENABLED, INCIDENTS, MAY_DECLARE, PLAYER, UI_SCALE, Locale } from '@store/stores';
   import { fly, fade, scale, slide } from 'svelte/transition';
   import { flip } from 'svelte/animate';
   import { DUR, EASE_IN, EASE_OUT } from '@utils/motion';
@@ -13,7 +13,7 @@
   // adjusting, so anything that needs dragging fights you. The ceiling is
   // deliberate too — beyond about 1.3 the panel walks off a 1080p screen, and
   // the way back in is this dialog.
-  const SCALES = [[0.9, 'Small'], [1.0, 'Default'], [1.15, 'Large'], [1.3, 'Huge']];
+  const SCALES = [[0.9, $Locale.ui_scale_small], [1.0, $Locale.ui_scale_default], [1.15, $Locale.ui_scale_large], [1.3, $Locale.ui_scale_huge]];
 
   let activeCallId = null;
   let activePlateId = null;
@@ -97,9 +97,9 @@
   }
 
   const ALERT_POSITIONS = [
-    ['top-left', 'Top Left'], ['top-center', 'Top Center'], ['top-right', 'Top Right'],
-    ['center-left', 'Center Left'], ['center-right', 'Center Right'],
-    ['bottom-left', 'Bottom Left'], ['bottom-center', 'Bottom Center'], ['bottom-right', 'Bottom Right'],
+    ['top-left', $Locale.ui_pos_top_left], ['top-center', $Locale.ui_pos_top_center], ['top-right', $Locale.ui_pos_top_right],
+    ['center-left', $Locale.ui_pos_center_left], ['center-right', $Locale.ui_pos_center_right],
+    ['bottom-left', $Locale.ui_pos_bottom_left], ['bottom-center', $Locale.ui_pos_bottom_center], ['bottom-right', $Locale.ui_pos_bottom_right],
   ];
 
   // Persist the modal's choices per player; AlwaysListener re-applies them
@@ -112,8 +112,12 @@
     saveSettings();
   }
 
-  // 'vehicleshots' -> 'Vehicle shots'
+  // Alert type codeNames are also locale keys — every one that ships an alert
+  // message already has a translation (see locales/*.json). Only a
+  // server-added codeName without a matching key falls back to prettifying
+  // the raw string, e.g. 'vehicleshots' -> 'Vehicle shots'.
   function prettyCode(code) {
+    if ($Locale[code]) return $Locale[code];
     const spaced = code.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ');
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
@@ -238,7 +242,7 @@
     >
       <div class="pd-head">
         <div class="pd-icon pd-icon--green"><i class="fas fa-user-group"></i></div>
-        <span class="pd-title">Active Calls</span>
+        <span class="pd-title">{$Locale.ui_active_calls}</span>
         <span class="pd-badge pd-badge--green">{heldActive.length}</span>
       </div>
       <div class="pd-scroll flex-1 overflow-y-auto p-[10px] flex flex-col gap-[6px]">
@@ -262,19 +266,19 @@
       <div class="pd-icon"><i class="fas fa-tower-broadcast"></i></div>
       <span class="pd-title">Dispatch</span>
       {#if $DISPATCH_MENU && ($MENU_TAB === 'calls' || !$PLATES_ENABLED)}
-        <span class="pd-badge">{pendingCalls.length} pending</span>
+        <span class="pd-badge">{$Locale.ui_pending_count.replace('%s', pendingCalls.length)}</span>
       {/if}
       <div class="flex items-center gap-[4px] ml-auto">
-        <button class="pd-ctl" class:pd-ctl--active={settingsOpen} title="Settings" on:click={() => settingsOpen = true}>
+        <button class="pd-ctl" class:pd-ctl--active={settingsOpen} title={$Locale.ui_settings} on:click={() => settingsOpen = true}>
           <i class="fas fa-gear"></i>
         </button>
-        <button class="pd-ctl" class:pd-ctl--active={statsOpen} title="Session stats" on:click={toggleStats}>
+        <button class="pd-ctl" class:pd-ctl--active={statsOpen} title={$Locale.ui_session_stats} on:click={toggleStats}>
           <i class="fas fa-chart-simple"></i>
         </button>
-        <button class="pd-ctl" title="Refresh" on:click={() => SendNUI("refreshAlerts")}>
+        <button class="pd-ctl" title={$Locale.ui_refresh} on:click={() => SendNUI("refreshAlerts")}>
           <i class="fas fa-arrows-rotate"></i>
         </button>
-        <button class="pd-ctl" title="Clear blips" on:click={() => SendNUI("clearBlips")}>
+        <button class="pd-ctl" title={$Locale.ui_clear_blips} on:click={() => SendNUI("clearBlips")}>
           <i class="fas fa-ban"></i>
         </button>
       </div>
@@ -288,20 +292,20 @@
     <div class="pd-tabs">
       <button class="pd-tab" class:pd-tab--active={$MENU_TAB === 'calls'} on:click={() => MENU_TAB.set('calls')}>
         <i class="fas fa-tower-broadcast"></i>
-        Calls
+        {$Locale.ui_tab_calls}
         {#if pendingCalls.length}
           <span class="pd-tab-count">{pendingCalls.length}</span>
         {/if}
       </button>
       <button class="pd-tab" class:pd-tab--active={$MENU_TAB === 'plates'} on:click={() => MENU_TAB.set('plates')}>
         <i class="fas fa-car-side"></i>
-        Plates
+        {$Locale.ui_tab_plates}
         {#if $PLATE_HITS.length}
           <span class="pd-tab-count" class:pd-tab-count--alert={alertHits > 0}>{$PLATE_HITS.length}</span>
         {/if}
       </button>
       {#if $MENU_TAB === 'plates' && $PLATE_HITS.length}
-        <button class="pd-tab-action" title="Clear the whole log" on:click={() => SendNUI('clearPlateHits', {})}>
+        <button class="pd-tab-action" title={$Locale.ui_clear_whole_log} on:click={() => SendNUI('clearPlateHits', {})}>
           <i class="fas fa-trash-can"></i>
         </button>
       {/if}
@@ -310,11 +314,11 @@
 
     {#if statsOpen && $STATS}
       <div class="pd-stats" transition:slide={{ duration: DUR.base, easing: EASE_OUT }}>
-        <span><b>{$STATS.calls}</b> calls</span>
-        {#if $STATS.mergedReports}<span><b>{$STATS.mergedReports}</b> merged</span>{/if}
-        <span><b>{$STATS.calls ? Math.round(($STATS.answered / $STATS.calls) * 100) : 0}%</b> answered</span>
-        <span>avg response <b class="pd-mono">{fmtAvg($STATS.avgResponseMs)}</b></span>
-        {#if $STATS.topCode}<span>top: <b>{$STATS.topCode}</b> ×{$STATS.topCount}</span>{/if}
+        <span><b>{$STATS.calls}</b> {$Locale.ui_stats_calls}</span>
+        {#if $STATS.mergedReports}<span><b>{$STATS.mergedReports}</b> {$Locale.ui_stats_merged}</span>{/if}
+        <span><b>{$STATS.calls ? Math.round(($STATS.answered / $STATS.calls) * 100) : 0}%</b> {$Locale.ui_stats_answered}</span>
+        <span>{$Locale.ui_stats_avg_response} <b class="pd-mono">{fmtAvg($STATS.avgResponseMs)}</b></span>
+        {#if $STATS.topCode}<span>{$Locale.ui_stats_top} <b>{$STATS.topCode}</b> ×{$STATS.topCount}</span>{/if}
       </div>
     {/if}
 
@@ -331,11 +335,11 @@
                 {inc.code ? inc.code + ' · ' : ''}{inc.title}
               </span>
               <span class="pd-incident-sub truncate">
-                declared by {inc.declaredByName}{myIncidentIds.has(inc.id) ? ' · routine traffic held back' : ''}
+                {$Locale.ui_declared_by} {inc.declaredByName}{myIncidentIds.has(inc.id) ? ' · ' + $Locale.ui_routine_held_back : ''}
               </span>
             </div>
             {#if $MAY_DECLARE}
-              <button class="pd-incident-end" title="Stand down" on:click={() => SendNUI('standDownIncident', { id: inc.id })}>
+              <button class="pd-incident-end" title={$Locale.ui_stand_down} on:click={() => SendNUI('standDownIncident', { id: inc.id })}>
                 <i class="fas fa-xmark"></i>
               </button>
             {/if}
@@ -354,7 +358,7 @@
           {/each}
           {#if !pendingCalls.length}
             <p class="pd-more" style="text-align:center; padding-top: 14px;" transition:fade={{ duration: DUR.fast }}>
-              {heldActive.length ? 'All calls are being handled' : 'No active calls'}
+              {heldActive.length ? $Locale.ui_all_calls_handled : $Locale.ui_no_active_calls}
             </p>
           {/if}
         {/if}
@@ -366,7 +370,7 @@
         {/each}
         {#if !$PLATE_HITS.length}
           <p class="pd-more" style="text-align:center; padding-top: 14px;" transition:fade={{ duration: DUR.fast }}>
-            No plate checks run this session
+            {$Locale.ui_no_plate_checks}
           </p>
         {/if}
       {/if}
@@ -384,7 +388,7 @@
           </div>
           <span class="pd-modal-title">{mapCall.message}</span>
           {#if mapCall.street}<span class="pd-badge">{mapCall.street}</span>{/if}
-          <button class="pd-ctl" title="Close" on:click={() => mapCall = null}>
+          <button class="pd-ctl" title={$Locale.ui_close} on:click={() => mapCall = null}>
             <i class="fas fa-xmark"></i>
           </button>
         </div>
@@ -398,10 +402,10 @@
             height={520}
           />
           <div class="pd-map-controls">
-            <button class="pd-ctl" title="Zoom in" on:click={() => zoomMap(1.35)}><i class="fas fa-plus"></i></button>
-            <button class="pd-ctl" title="Zoom out" on:click={() => zoomMap(1 / 1.35)}><i class="fas fa-minus"></i></button>
+            <button class="pd-ctl" title={$Locale.ui_zoom_in} on:click={() => zoomMap(1.35)}><i class="fas fa-plus"></i></button>
+            <button class="pd-ctl" title={$Locale.ui_zoom_out} on:click={() => zoomMap(1 / 1.35)}><i class="fas fa-minus"></i></button>
           </div>
-          <span class="pd-map-hint">Scroll to zoom</span>
+          <span class="pd-map-hint">{$Locale.ui_scroll_to_zoom}</span>
         </div>
       </div>
     </div>
@@ -419,15 +423,15 @@
       <div class="pd-modal" in:scale={{ start: 0.96, duration: DUR.base, easing: EASE_IN }} out:scale={{ start: 0.97, duration: DUR.exit, easing: EASE_OUT }}>
         <div class="pd-modal-head">
           <div class="pd-icon"><i class="fas fa-gear"></i></div>
-          <span class="pd-modal-title">Dispatch Settings</span>
-          <button class="pd-ctl" title="Close" on:click={() => settingsOpen = false}>
+          <span class="pd-modal-title">{$Locale.ui_dispatch_settings}</span>
+          <button class="pd-ctl" title={$Locale.ui_close} on:click={() => settingsOpen = false}>
             <i class="fas fa-xmark"></i>
           </button>
         </div>
         <div class="pd-modal-body pd-scroll">
 
           <div class="pd-form-group">
-            <span class="pd-form-label">Interface Scale</span>
+            <span class="pd-form-label">{$Locale.ui_interface_scale}</span>
             <div class="pd-scale-row">
               {#each SCALES as [value, label]}
                 <button
@@ -437,34 +441,34 @@
                 >{label}</button>
               {/each}
             </div>
-            <span class="text-[10px] opacity-35">Sized for 1080p — 1440p usually wants Large, 4K Huge</span>
+            <span class="text-[10px] opacity-35">{$Locale.ui_scale_hint}</span>
           </div>
 
           <div class="pd-form-group">
-            <span class="pd-form-label">Alert Position</span>
+            <span class="pd-form-label">{$Locale.ui_alert_position}</span>
             <select class="pd-select" value={$ALERT_POSITION} on:change={(e) => { ALERT_POSITION.set(e.target.value); saveSettings(); }}>
               {#each ALERT_POSITIONS as [value, label]}
                 <option {value}>{label}</option>
               {/each}
             </select>
-            <span class="pd-form-hint">Where incoming alert cards appear on screen</span>
+            <span class="pd-form-hint">{$Locale.ui_alert_position_hint}</span>
           </div>
 
           <div class="pd-form-group">
-            <span class="pd-form-label">Max Visible Alerts</span>
+            <span class="pd-form-label">{$Locale.ui_max_visible_alerts}</span>
             <select class="pd-select" value={$MAX_VISIBLE_ALERTS} on:change={(e) => { MAX_VISIBLE_ALERTS.set(Number(e.target.value)); saveSettings(); }}>
               {#each [2, 3, 4, 5, 6] as n}
                 <option value={n}>{n}</option>
               {/each}
             </select>
-            <span class="pd-form-hint">Older alerts collapse into "+N more"</span>
+            <span class="pd-form-hint">{$Locale.ui_max_visible_hint}</span>
           </div>
 
           {#if $MAP_IMAGE}
             <div class="pd-toggle-row">
               <div class="pd-form-group">
-                <span class="pd-form-label">Map Thumbnails</span>
-                <span class="pd-form-hint">Scene preview on alerts and expanded calls</span>
+                <span class="pd-form-label">{$Locale.ui_map_thumbnails}</span>
+                <span class="pd-form-hint">{$Locale.ui_map_thumbnails_hint}</span>
               </div>
               <div class="pd-toggle" class:pd-toggle--on={$THUMBS_ENABLED} on:click={() => { THUMBS_ENABLED.update(v => !v); saveSettings(); }}></div>
             </div>
@@ -472,43 +476,43 @@
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Compact Alerts</span>
-              <span class="pd-form-hint">Header, location and note only — no vehicle or suspect details</span>
+              <span class="pd-form-label">{$Locale.ui_compact_alerts}</span>
+              <span class="pd-form-hint">{$Locale.ui_compact_alerts_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={$COMPACT_ALERTS} on:click={() => { COMPACT_ALERTS.update(v => !v); saveSettings(); }}></div>
           </div>
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Map Blips</span>
-              <span class="pd-form-hint">Place a blip and search radius on the game map</span>
+              <span class="pd-form-label">{$Locale.ui_map_blips}</span>
+              <span class="pd-form-hint">{$Locale.ui_map_blips_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={$BLIPS_ENABLED} on:click={() => { BLIPS_ENABLED.update(v => !v); saveSettings(); }}></div>
           </div>
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Priority Alerts Only</span>
-              <span class="pd-form-hint">Mute routine calls entirely — assignments always come through</span>
+              <span class="pd-form-label">{$Locale.ui_priority_only}</span>
+              <span class="pd-form-hint">{$Locale.ui_priority_only_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={$PRIORITY_ONLY} on:click={() => { PRIORITY_ONLY.update(v => !v); saveSettings(); }}></div>
           </div>
 
           <div class="pd-form-group">
-            <span class="pd-form-label">Alert Duration</span>
+            <span class="pd-form-label">{$Locale.ui_alert_duration}</span>
             <select class="pd-select" value={$ALERT_DURATION} on:change={(e) => { ALERT_DURATION.set(Number(e.target.value)); saveSettings(); }}>
-              <option value={0.5}>Short (0.5×)</option>
-              <option value={1}>Normal (1×)</option>
-              <option value={1.5}>Long (1.5×)</option>
-              <option value={2}>Very long (2×)</option>
+              <option value={0.5}>{$Locale.ui_duration_short}</option>
+              <option value={1}>{$Locale.ui_duration_normal}</option>
+              <option value={1.5}>{$Locale.ui_duration_long}</option>
+              <option value={2}>{$Locale.ui_duration_very_long}</option>
             </select>
-            <span class="pd-form-hint">How long alert cards stay on screen</span>
+            <span class="pd-form-hint">{$Locale.ui_alert_duration_hint}</span>
           </div>
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Reduced Motion</span>
-              <span class="pd-form-hint">Disable animations — calmer, and lighter on weak PCs</span>
+              <span class="pd-form-label">{$Locale.ui_reduced_motion}</span>
+              <span class="pd-form-hint">{$Locale.ui_reduced_motion_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={$REDUCED_MOTION} on:click={() => { REDUCED_MOTION.update(v => !v); saveSettings(); }}></div>
           </div>
@@ -517,8 +521,8 @@
             <div class="pd-form-group">
               <button class="pd-btn w-full" on:click={() => typesOpen = !typesOpen}>
                 <i class="fas fa-filter"></i>
-                Alert Types
-                {#if $MUTED_CODES.length}<span class="pd-badge pd-badge--amber">{$MUTED_CODES.length} muted</span>{/if}
+                {$Locale.ui_alert_types}
+                {#if $MUTED_CODES.length}<span class="pd-badge pd-badge--amber">{$Locale.ui_muted_count.replace('%s', $MUTED_CODES.length)}</span>{/if}
                 <i class="fas fa-chevron-{typesOpen ? 'up' : 'down'} ml-auto text-[9px] opacity-50"></i>
               </button>
               {#if typesOpen}
@@ -530,23 +534,23 @@
                     </div>
                   {/each}
                 </div>
-                <span class="pd-form-hint">Muted types produce no popup, sound or blip for you</span>
+                <span class="pd-form-hint">{$Locale.ui_alert_types_hint}</span>
               {/if}
             </div>
           {/if}
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Alert Sounds</span>
-              <span class="pd-form-hint">Audio cue when a new alert arrives</span>
+              <span class="pd-form-label">{$Locale.ui_alert_sounds}</span>
+              <span class="pd-form-hint">{$Locale.ui_alert_sounds_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={!$DISPATCH_MUTED} on:click={toggleMute}></div>
           </div>
 
           <div class="pd-toggle-row">
             <div class="pd-form-group">
-              <span class="pd-form-label">Receive Alerts</span>
-              <span class="pd-form-hint">Master switch — popups, sounds and blips</span>
+              <span class="pd-form-label">{$Locale.ui_receive_alerts}</span>
+              <span class="pd-form-hint">{$Locale.ui_receive_alerts_hint}</span>
             </div>
             <div class="pd-toggle" class:pd-toggle--on={!$DISPATCH_DISABLED} on:click={toggleAlerts}></div>
           </div>

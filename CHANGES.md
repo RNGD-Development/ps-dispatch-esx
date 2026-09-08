@@ -44,6 +44,50 @@ rebuilt bundle (`npm run build`); `ui/src/` is the only source touched.
 
 ---
 
+## 2026-09-08 — Full UI localization (RNGD-Development)
+
+Follow-up to the relative-time fix below: the rest of the NUI's own chrome
+(tab labels, tooltips, badges, the entire settings modal, weapon names,
+plate-log actions) was still hardcoded English, untouched by
+`locales/*.json`. Extended the same mechanism from the earlier change to
+cover it, so the dispatch UI is now fully translated in all eight shipped
+languages, deliberately trading a larger future merge-conflict surface (many
+more lines in `Menu.svelte`, `CallRow.svelte`, `Main.svelte`, `PlateRow.svelte`
+now read from `$Locale` instead of literal strings) for zero remaining
+untranslated UI text — the priority the maintainer set for this pass.
+
+- `ui/src/store/stores.ts`: `LOCALE_DATA` gained an index signature
+  (`[key: string]: string`) instead of naming each key, since the store now
+  carries well over a hundred keys and upstream additions to
+  `locales/*.json` should not require a matching interface edit here.
+- `ui/src/components/Menu.svelte`, `CallRow.svelte`, `Main.svelte`,
+  `PlateRow.svelte`: every literal UI string replaced with a `$Locale.*`
+  lookup (or, for the two count-carrying strings, `.replace('%s', n)` on
+  one). `Menu.svelte`'s `prettyCode()` — used for the alert-type filter list
+  — now checks `$Locale[code]` first, reusing the alert-message translation
+  every codeName already has in `locales/*.json`, and only falls back to
+  prettifying the raw string for a codeName with no matching key. The one
+  deliberate exception is the word "Dispatch" itself, left untranslated in
+  every language — already the accepted term for this system regardless of
+  which language the rest of the UI is in.
+- `locales/*.json`: ~104 new keys per file (`ui_*`, `weapon_*`), translated
+  for all eight languages. Purely additive.
+
+Verified in the headless NUI preview with a simulated `setupUI`/`de` payload
+covering every screen: active-calls board, dispatch board with an expanded
+call (attached units, weapon banner, note/clear/attach buttons), the popup
+alert (escalation/hotspot/automatic/responding badges), the settings modal
+(every toggle, hint, and the alert-type filter list including a codeName
+with no locale entry, to confirm the fallback), the session-stats panel, and
+the plate log (copy/backup/dismiss).
+
+### Not changed
+
+No Lua files. `html/` is the rebuilt bundle (`npm run build`); `ui/src/` is
+the only source touched.
+
+---
+
 ## 2026-09-05 — ESX Legacy support (RNGD-Development)
 
 Modified from upstream ps-dispatch v3.0.1.

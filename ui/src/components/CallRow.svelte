@@ -45,10 +45,10 @@
     shotgun: 'fa-gun', sniper: 'fa-crosshairs', heavy: 'fa-burst',
     taser: 'fa-bolt',
   };
-  const WEAPON_LABEL = {
-    pistol: 'Handgun', smg: 'Submachine gun', rifle: 'Rifle',
-    shotgun: 'Shotgun', sniper: 'Long rifle', heavy: 'Heavy weapon',
-    taser: 'Taser',
+  $: WEAPON_LABEL = {
+    pistol: $Locale.weapon_pistol, smg: $Locale.weapon_smg, rifle: $Locale.weapon_rifle,
+    shotgun: $Locale.weapon_shotgun, sniper: $Locale.weapon_sniper, heavy: $Locale.weapon_heavy,
+    taser: $Locale.weapon_taser,
   };
 
   let confirmDeclare = false;
@@ -144,7 +144,7 @@
     const out = [];
     if (d.color) out.push(d.color);
     if (d.class) out.push(d.class);
-    if (d.doors) out.push(`${d.doors} doors`);
+    if (d.doors) out.push(`${d.doors} ${$Locale.ui_doors_suffix}`);
     return out;
   }
 </script>
@@ -161,7 +161,7 @@
            what actually happened. -->
       <div class="flex items-center gap-[6px] min-w-0">
         <span class="pd-badge {isUrgent ? 'pd-badge--red' : 'pd-badge--cyan'} flex-shrink-0">{dispatch.code}</span>
-        {#if isCritical}<span class="pd-badge pd-badge--critical flex-shrink-0">Critical</span>{/if}
+        {#if isCritical}<span class="pd-badge pd-badge--critical flex-shrink-0">{$Locale.ui_critical}</span>{/if}
         <span class="pd-row-msg flex-1 min-w-0">{dispatch.message}</span>
       </div>
       <!-- The street is the one thing on this line allowed to give up space,
@@ -178,13 +178,13 @@
         {#if dispatch.street}<span class="text-[10px] opacity-40 truncate flex-1 min-w-0">{dispatch.street}</span>{/if}
         <span class="pd-time flex-shrink-0">{timeAgo(dispatch.time)}</span>
         {#if $PINNED_CODES.includes(dispatch.codeName)}
-          <span class="pd-badge pd-badge--red flex-shrink-0" title="Pinned critical call"><i class="fas fa-thumbtack"></i></span>
+          <span class="pd-badge pd-badge--red flex-shrink-0" title={$Locale.ui_pinned_critical_call}><i class="fas fa-thumbtack"></i></span>
         {/if}
         {#if (dispatch.count || 1) > 1}
           <span class="pd-badge pd-badge--red flex-shrink-0">×{dispatch.count}</span>
         {/if}
         {#if dispatch.hotspot}
-          <span class="pd-badge pd-badge--purple flex-shrink-0" title="Repeated incidents on this street"><i class="fas fa-fire mr-[3px]"></i>×{dispatch.hotspot}</span>
+          <span class="pd-badge pd-badge--purple flex-shrink-0" title={$Locale.ui_repeated_incidents_street}><i class="fas fa-fire mr-[3px]"></i>×{dispatch.hotspot}</span>
         {/if}
       </div>
       {#if showUnitsInline && dispatch.units?.length}
@@ -200,7 +200,7 @@
     </div>
     <div class="flex items-center gap-[6px] flex-shrink-0">
       {#if unattendedFor(dispatch)}
-        <span class="pd-badge pd-badge--amber" title="No units attached"><i class="fas fa-clock mr-[3px]"></i>{unattendedFor(dispatch)}m</span>
+        <span class="pd-badge pd-badge--amber" title={$Locale.ui_no_units_attached}><i class="fas fa-clock mr-[3px]"></i>{unattendedFor(dispatch)}m</span>
       {/if}
       {#if unitCount > 0}
         <span class="pd-badge pd-badge--green"><i class="fas fa-user-group mr-[3px]"></i>{unitCount}</span>
@@ -221,7 +221,7 @@
       {#if $MAP_IMAGE && $THUMBS_ENABLED && !dispatch.footer}
         <!-- Click opens the enlarged, zoomable map (handled by the parent so
              there is only ever one overlay). -->
-        <div class="pd-thumb-click" title="Enlarge map" on:click={() => emit('expandMap')}>
+        <div class="pd-thumb-click" title={$Locale.ui_enlarge_map} on:click={() => emit('expandMap')}>
           <MapThumb coords={dispatch.displayCoords || dispatch.coords} radius={dispatch.mapRadius || 0} priority={dispatch.priority} src={$MAP_IMAGE} height={92} />
           <span class="pd-thumb-zoom"><i class="fas fa-magnifying-glass-plus"></i></span>
         </div>
@@ -230,7 +230,7 @@
         <div class="pd-strip">
           <div class="pd-strip-row">
             <i class="fas fa-location-dot text-[10px] opacity-50"></i>
-            <span class="pd-strip-title">{dispatch.street || 'Unknown location'}</span>
+            <span class="pd-strip-title">{dispatch.street || $Locale.ui_unknown_location}</span>
             {#if dispatch.heading}
               <span class="pd-badge pd-badge--blue"><i class="fas fa-compass mr-[3px]"></i>{dispatch.heading}</span>
             {/if}
@@ -242,7 +242,7 @@
         <div class="pd-strip">
           <div class="pd-strip-row">
             <i class="fas fa-car text-[10px] opacity-50"></i>
-            <span class="pd-strip-title pd-strip-title--tight">{dispatch.vehicle || 'Unknown vehicle'}</span>
+            <span class="pd-strip-title pd-strip-title--tight">{dispatch.vehicle || $Locale.ui_unknown_vehicle}</span>
             {#if dispatch.plate}
               <Plate plate={dispatch.plate} index={dispatch.plateIndex} />
               <!-- Only reachable once the call is expanded, so it never
@@ -252,7 +252,7 @@
                 class:pd-copy--done={copiedPlate}
                 role="button"
                 tabindex="-1"
-                title={copiedPlate ? 'Copied' : 'Copy plate'}
+                title={copiedPlate ? $Locale.ui_copied : $Locale.ui_copy_plate}
                 on:click|stopPropagation={copyPlate}
                 on:keydown|stopPropagation
               >
@@ -278,16 +278,16 @@
           <div class="pd-strip-row">
             <i class="fas {WEAPON_ICON[dispatch.weaponClass] || 'fa-gun'} text-[10px]"></i>
             <span class="pd-strip-title pd-strip-title--tight">
-              {WEAPON_LABEL[dispatch.weaponClass] || dispatch.weapon || 'Shots fired'}
+              {WEAPON_LABEL[dispatch.weaponClass] || dispatch.weapon || $Locale.ui_shots_fired}
             </span>
             {#if dispatch.weapon && WEAPON_LABEL[dispatch.weaponClass]}
               <span class="pd-weap-model">{dispatch.weapon}</span>
             {/if}
             {#if dispatch.automaticGunFire}
-              <span class="pd-badge pd-badge--red">Automatic</span>
+              <span class="pd-badge pd-badge--red">{$Locale.ui_automatic}</span>
             {/if}
             {#if (dispatch.count || 1) > 1}
-              <span class="pd-badge">×{dispatch.count} reports</span>
+              <span class="pd-badge">×{dispatch.count} {$Locale.ui_reports_suffix}</span>
             {/if}
           </div>
         </div>
@@ -320,7 +320,7 @@
         <div class="pd-note-editor">
           <input
             class="pd-input"
-            placeholder="Note for every unit on this call…"
+            placeholder={$Locale.ui_note_placeholder}
             maxlength="240"
             bind:value={noteDraft}
             on:keydown={(e) => { if (e.key === 'Enter') saveNote(); if (e.key === 'Escape') noteOpen = false; }}
@@ -332,7 +332,7 @@
 
       {#if dispatch.units.length > 0}
         <div class="mt-[7px]">
-          <span class="pd-kv-label">Attached Units</span>
+          <span class="pd-kv-label">{$Locale.ui_attached_units}</span>
           <div class="mt-[3px]">
             {#each dispatch.units.slice(0, showAllUnits ? dispatch.units.length : UNIT_LIMIT) as unit}
               <div class="pd-unit">
@@ -346,7 +346,7 @@
                    clear, attach and possibly declare. A quiet text line reads
                    as "there is more" without adding to that stack. -->
               <button class="pd-more-units" on:click|stopPropagation={() => showAllUnits = !showAllUnits}>
-                {showAllUnits ? 'Show fewer' : `+${dispatch.units.length - UNIT_LIMIT} ${$Locale.additionals}`}
+                {showAllUnits ? $Locale.ui_show_fewer : `+${dispatch.units.length - UNIT_LIMIT} ${$Locale.additionals}`}
               </button>
             {/if}
           </div>
@@ -355,22 +355,22 @@
 
       <div class="flex gap-[5px] mt-[8px]">
         <button class="pd-btn flex-1" on:click={noteOpen ? () => noteOpen = false : openNote}>
-          <i class="fas fa-pen"></i> {dispatch.dispatchNote ? 'Edit note' : 'Add note'}
+          <i class="fas fa-pen"></i> {dispatch.dispatchNote ? $Locale.ui_edit_note : $Locale.ui_add_note}
         </button>
         <button class="pd-btn {confirmClear ? 'pd-btn--red' : ''} flex-1" on:click={clearCall}>
           <i class="fas fa-{confirmClear ? 'triangle-exclamation' : 'circle-check'}"></i>
-          {confirmClear ? 'Confirm clear' : 'Clear call'}
+          {confirmClear ? $Locale.ui_confirm_clear : $Locale.ui_clear_call}
         </button>
       </div>
 
       {#if mayDeclare}
         <button class="pd-btn {isIncident ? 'pd-btn--red' : confirmDeclare ? 'pd-btn--red' : ''} w-full mt-[5px]" on:click|stopPropagation={toggleIncident}>
           {#if isIncident}
-            <i class="fas fa-xmark"></i> Stand down major incident
+            <i class="fas fa-xmark"></i> {$Locale.ui_stand_down_major}
           {:else if confirmDeclare}
-            <i class="fas fa-triangle-exclamation"></i> Confirm — pins for all units
+            <i class="fas fa-triangle-exclamation"></i> {$Locale.ui_confirm_pins_all}
           {:else}
-            <i class="fas fa-tower-broadcast"></i> Declare major incident
+            <i class="fas fa-tower-broadcast"></i> {$Locale.ui_declare_major}
           {/if}
         </button>
       {/if}
