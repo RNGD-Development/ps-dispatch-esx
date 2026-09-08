@@ -102,5 +102,15 @@
     "plate_backup_failed": "Žádost se nepodařilo odeslat",
     "incident_too_many": "Příliš mnoho aktivních událostí (%s)",
     "incident_default_title": "Velká událost",
-    "incident_supervisor": "Velitel"
+    "incident_supervisor": "Velitel",
+
+    "time_just_now": "Právě teď",
+    "time_seconds_ago": "Před %s sekundami",
+    "time_minute_ago": "Před minutou",
+    "time_minutes_ago": "Před %s minutami",
+    "time_today": "Dnes",
+    "time_yesterday": "Včera",
+    "time_at": "v",
+    "time_unknown": "Neznámé",
+    "time_invalid_date": "Neplatné datum"
 }

@@ -102,5 +102,15 @@
   "plate_backup_failed": "Impossible d'envoyer la demande",
   "incident_too_many": "Trop d'incidents majeurs actifs (%s)",
   "incident_default_title": "Incident majeur",
-  "incident_supervisor": "Superviseur"
+  "incident_supervisor": "Superviseur",
+
+  "time_just_now": "À l'instant",
+  "time_seconds_ago": "Il y a %s secondes",
+  "time_minute_ago": "Il y a une minute",
+  "time_minutes_ago": "Il y a %s minutes",
+  "time_today": "Aujourd'hui",
+  "time_yesterday": "Hier",
+  "time_at": "à",
+  "time_unknown": "Inconnu",
+  "time_invalid_date": "Date invalide"
 }

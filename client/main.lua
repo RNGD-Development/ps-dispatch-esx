@@ -181,6 +181,7 @@ local function setupDispatch()
         action = "setupUI",
         data = {
             locales = locales,
+            localeKey = lib.getLocaleKey(),
             player = PlayerData,
             keybind = Config.RespondKeybind,
             maxCallList = Config.MaxCallList,

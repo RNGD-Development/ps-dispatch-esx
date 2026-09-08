@@ -102,5 +102,15 @@
   "plate_backup_failed": "Could not send the request",
   "incident_too_many": "Too many active incidents (%s)",
   "incident_default_title": "Major incident",
-  "incident_supervisor": "Supervisor"
+  "incident_supervisor": "Supervisor",
+
+  "time_just_now": "Just now",
+  "time_seconds_ago": "%s seconds ago",
+  "time_minute_ago": "A minute ago",
+  "time_minutes_ago": "%s minutes ago",
+  "time_today": "Today",
+  "time_yesterday": "Yesterday",
+  "time_at": "at",
+  "time_unknown": "Unknown",
+  "time_invalid_date": "Invalid date"
 }

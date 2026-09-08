@@ -102,5 +102,15 @@
     "plate_backup_failed": "Verzoek kon niet worden verzonden",
     "incident_too_many": "Te veel actieve grootschalige incidenten (%s)",
     "incident_default_title": "Grootschalig incident",
-    "incident_supervisor": "Supervisor"
+    "incident_supervisor": "Supervisor",
+
+    "time_just_now": "Zojuist",
+    "time_seconds_ago": "%s seconden geleden",
+    "time_minute_ago": "Een minuut geleden",
+    "time_minutes_ago": "%s minuten geleden",
+    "time_today": "Vandaag",
+    "time_yesterday": "Gisteren",
+    "time_at": "om",
+    "time_unknown": "Onbekend",
+    "time_invalid_date": "Ongeldige datum"
 }

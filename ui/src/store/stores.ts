@@ -95,9 +95,22 @@ interface LOCALE_DATA {
   unit: string,
   units: string,
   additionals: string,
+  time_just_now?: string,
+  time_seconds_ago?: string,
+  time_minute_ago?: string,
+  time_minutes_ago?: string,
+  time_today?: string,
+  time_yesterday?: string,
+  time_at?: string,
+  time_unknown?: string,
+  time_invalid_date?: string,
 }
 
 export const Locale = writable<LOCALE_DATA>(null);
+// ox_lib locale key (e.g. "de", "en") the strings in Locale were built from —
+// used to localize things ox_lib's flat string dict can't express, like Intl
+// month names and date formatting.
+export const LOCALE_KEY = writable<string>('en');
 
 export const processedDispatchMenu = derived(
   [DISPATCH_MENU, MAX_CALL_LIST, PLAYER, PINNED_CODES],

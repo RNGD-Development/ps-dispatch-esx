@@ -362,7 +362,7 @@ Eight languages in `locales/`: `en` `de` `es` `fr` `nl` `pt-br` `tr` `cs`. Every
 
 Server-side messages that reach a player send a **reason code** rather than a finished sentence, and the client translates it — so the text lands in the language of whoever is reading it, not whatever the server runs.
 
-The UI itself is English. If you add a key, add it to all eight files: a missing key renders as the key name, not as a fallback.
+Most of the UI's own chrome (buttons, labels) is still hardcoded English — that predates the locale system and hasn't been migrated. Relative call times (`Just now`, `5 minutes ago`, `Yesterday at 16:54`, ...) are the exception: the client sends its whole locale dict — via `lib.getLocales()` — and the active `ox:locale` key to the NUI once on load, and the UI reads `time_*` keys from it, with `Intl.DateTimeFormat` supplying the month name for the active language. `en.json` is always the base and other languages merge on top, so a key missing from e.g. `de.json` falls back to the English string rather than the raw key name — only a key missing from `en.json` too renders as its own name. If you add a key meant for the UI, add it to all eight files and read it via the `Locale`/`LOCALE_KEY` stores in `ui/src/store/stores.ts`, the same way `ui/src/utils/timeAgo.ts` does.
 
 ## Notes
 

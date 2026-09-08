@@ -102,5 +102,15 @@
   "plate_backup_failed": "Talep gönderilemedi",
   "incident_too_many": "Çok fazla aktif büyük olay (%s)",
   "incident_default_title": "Büyük olay",
-  "incident_supervisor": "Amir"
+  "incident_supervisor": "Amir",
+
+  "time_just_now": "Az önce",
+  "time_seconds_ago": "%s saniye önce",
+  "time_minute_ago": "Bir dakika önce",
+  "time_minutes_ago": "%s dakika önce",
+  "time_today": "Bugün",
+  "time_yesterday": "Dün",
+  "time_at": "saat",
+  "time_unknown": "Bilinmiyor",
+  "time_invalid_date": "Geçersiz tarih"
 }

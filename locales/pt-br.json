@@ -103,5 +103,15 @@
     "plate_backup_failed": "Não foi possível enviar o pedido",
     "incident_too_many": "Incidentes ativos demais (%s)",
     "incident_default_title": "Incidente grave",
-    "incident_supervisor": "Supervisor"
+    "incident_supervisor": "Supervisor",
+
+    "time_just_now": "Agora mesmo",
+    "time_seconds_ago": "Há %s segundos",
+    "time_minute_ago": "Há um minuto",
+    "time_minutes_ago": "Há %s minutos",
+    "time_today": "Hoje",
+    "time_yesterday": "Ontem",
+    "time_at": "às",
+    "time_unknown": "Desconhecido",
+    "time_invalid_date": "Data inválida"
 }

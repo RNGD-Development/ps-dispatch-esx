@@ -7,6 +7,43 @@ Project Sloth & OK1ez — see [`CREDITS.md`](CREDITS.md).
 
 ---
 
+## 2026-09-08 — Localized relative call times (RNGD-Development)
+
+`ui/src/utils/timeAgo.ts` (`Just now`, `5 minutes ago`, `Yesterday at 16:54`,
+...) was entirely hardcoded English — untouched by the `locales/*.json`
+system, which only ever reached the Lua side. Wired it into the same locale
+data the UI already receives, without adding any new plumbing:
+
+- `client/main.lua`: added `localeKey = lib.getLocaleKey()` next to the
+  existing `locales = lib.getLocales()` in the `setupUI` NUI payload, so the
+  UI knows which language it received, not just the translated strings.
+- `ui/src/store/stores.ts`: added the `LOCALE_KEY` store and nine optional
+  `time_*` fields to the `LOCALE_DATA` type.
+- `ui/src/providers/AlwaysListener.svelte`: one added line, `LOCALE_KEY.set(data.localeKey || 'en')`,
+  next to the existing `Locale.set(data.locales)`.
+- `ui/src/utils/timeAgo.ts`: reads the new `time_*` keys from the `Locale`
+  store instead of returning literal English strings, and maps `LOCALE_KEY`
+  to a BCP 47 tag so `Intl.DateTimeFormat` supplies the month name — twelve
+  fewer keys per language than hand-translating months, and the ICU data
+  behind `Intl` gets language details right that a manual translation
+  might not.
+- `locales/*.json`: nine new keys per file (`time_just_now`,
+  `time_seconds_ago`, `time_minute_ago`, `time_minutes_ago`, `time_today`,
+  `time_yesterday`, `time_at`, `time_unknown`, `time_invalid_date`),
+  translated for all eight languages. Purely additive — no existing key
+  changed.
+
+Most other UI chrome (buttons, labels) is still hardcoded English; only the
+relative-time strings were in scope here. See the README's Localisation
+section for the current state and how to extend it further.
+
+### Not changed
+
+No Lua files outside the one added line in `client/main.lua`. `html/` is the
+rebuilt bundle (`npm run build`); `ui/src/` is the only source touched.
+
+---
+
 ## 2026-09-05 — ESX Legacy support (RNGD-Development)
 
 Modified from upstream ps-dispatch v3.0.1.
